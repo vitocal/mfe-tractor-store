@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "preact",
+        "module": "esnext",
+        "target": "es2025",
+        "libReplacement": true,
+        "useDefineForClassFields": false,
+        "skipLibCheck": true,
+        "isolatedModules": true,
+        /* Linting */
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": false,
+        "noFallthroughCasesInSwitch": true,
+        /* Decorators */
+        "experimentalDecorators": true,
+        "paths": {
+            "react": [
+                "./node_modules/preact/compat/"
+            ],
+            "react/jsx-runtime": [
+                "./node_modules/preact/jsx-runtime"
+            ],
+            "react-dom": [
+                "./node_modules/preact/compat/"
+            ],
+            "react-dom/*": [
+                "./node_modules/preact/compat/*"
+            ]
+        },
+        "types": [
+            "vite/client"
+        ]
+    },
+    "include": [
+        "src/**/*",
+        "global.d.ts"
+    ],
+    "exclude": [
+        "node_modules/"
+    ]
+}
