@@ -65,7 +65,7 @@ class ViRouter extends HTMLElement {
                         const id = match.data?.id
                         const sku = match.params?.sku || ''
 
-                        this.render(`<decide-pages-product data-boundary-page="decide" id="${id}" sku="${sku}"></decide-page-product>`);
+                        this.render(`<decide-pages-product data-boundary-page="decide" id="${id}" sku="${sku}"></decide-pages-product>`);
                     }
                 },
 

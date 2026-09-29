@@ -1,29 +1,43 @@
 # Micro-Frontends Store Example
 
-This example demonstrates how to use `ce-autoloader` to orchestrate a Micro-Frontends (MFE) architecture.
+Tractor Micro-Frontends (MFE) example with lazy loaded web-components, using ce-autoloader, preact, svelte and vue.
+
+The objective is to have a large site with hundreds of components on multiple frontend frameworks while
+generating lean pages and components that can talk to each other between boundaries.
+
+Without manual hard-coded imports, without complex build-step tooling(module federation)
 
 ## Architecture
 
-- **Shared State**: Managed via `@preact/signals-core`. All components subscribe to the same signals to stay in sync.
-- **Components**:
-  - **Category Filter (React)**: Allows filtering products by category.
-  - **Product Grid (Vue)**: Displays products and allows adding them to the cart.
-  - **Total Summary (Svelte/Custom Element)**: Displays the cart contents and total price.
-- **Orchestration**: `ce-autoloader` is used to discovery and lazy-load these components as they appear in the DOM.
+- Each team ([checkout](./src/checkout/), [decide](./src/checkout/) and [explore](./src/explore/)) has an isolated repository.
+- Each team can choose their frontend technology stack, as long as they export web-components.
+- Each team can use another team component inside their projects without importing/linking them before-hand.
+  - Teams can mock components for local isolated development.
 
-## How it works
+- Each team publishes a bunch of files, independently of one another:
+  - A [manifest file](./src/checkout/dist/manifest.json)
+  - A [routing file](./src/checkout/routes.ts)
+  - A web-components [catalog](./src/checkout/catalog.ts)
+  - Several compiled [web-components files](./src/checkout/components/minicart.svelte) and it's assets.
 
-1. Each component is defined as a Custom Element (Web Component).
-2. The `catalog` in `index.html` maps tag names to their respective entry points.
-3. `ce-autoloader` monitors the DOM and loads the components only when needed (e.g., `loading="visible"`).
-4. Since all components share the same `store.js` (via ESM imports), they can communicate reactively.
+- A shell glues/bundles them together:
+  - A [router](./src/components/router.ts) reads each routing table
+  - A [Master catalog](./src/catalog.ts) joins each team catalog together
+  - Support for dynamic-sites(server side), where the components and pages are be updated real-time.
+  - Support for static-sites(local), the components and pages are updated after the build step.
 
-## Running the example
+- WebComponents not used on the page are not downloaded!
+- WebComponents are lazy-loaded, with proper loading animation (skeleton screens)
+- Errors in components are contained:
+  - A single bad component wont break the site compilation and runtime.
+- Inner components may not be `web-components`,they're only consumable by their own team.
+- State is shared between team boundaries via `signals` or other native browser features (`localStorage`)
+
+## Running
 
 ```bash
-cd pages/examples/mfe-store
 npm install
 npm run dev
 ```
 
-Or just open the `index.html` if you have a dev server running at the root of the project.
+Open `http://localhost:5147`

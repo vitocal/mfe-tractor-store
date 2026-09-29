@@ -1,0 +1,5 @@
+# Todo
+
+- [] Refactor **checkout** catalog load method, use [explore](./src/explore/catalog.ts) as the base.
+- [] Refactor **decide** catalog load method, use [explore](./src/explore/catalog.ts) as the base.
+- [] Change pages and components to prefix-p-page and prefx-c-component convention

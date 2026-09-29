@@ -4,6 +4,12 @@
   padding: 0 var(--outer-space);
 }
 
+.d_ProductPage__notfound {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
 .d_ProductPage__details {
   @media (max-width: 499px) {
     grid-template:
