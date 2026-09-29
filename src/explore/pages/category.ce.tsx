@@ -1,15 +1,13 @@
-import register from "preact-custom-element";
-
 import data from "../database/index";
-import Product from "../components/Product";
-import Filter from "../components/Filter";
+import Product from "../components/product";
+import Filter from "../components/filter";
 
-import './CategoryPage.css';
+import './category.css';
 
 /**
  * CategoryPage component.
  */
-export const CategoryPage = ({ category }: { category: String }) => {
+export const Category = ({ category }: { category: String }) => {
   const cat = category && data.categories.find((c) => c.key === category);
 
   const title = cat ? cat.name : "All Machines";
@@ -27,21 +25,21 @@ export const CategoryPage = ({ category }: { category: String }) => {
     })),
   ];
 
-  return (<>
-    <explore-header ></explore-header>
+  return (<div data-boundary-page="explore">
+    <explore-c-header ></explore-c-header>
     <main className="e_CategoryPage">
       <h2>{title}</h2>
       <div className="e_CategoryPage__subline">
         <p>{products.length} products</p>
-        {Filter({ filters })}
+        <Filter filters={filters} />
       </div>
       <ul className="e_CategoryPage_list">
-        {products.map(Product)}
+        {products.map((p) => <Product {...p} />)}
       </ul>
     </main>
-    <explore-footer ></explore-footer>
-  </>);
+    <explore-c-footer ></explore-c-footer>
+  </div>);
 };
 
-
-export default register(CategoryPage, 'explore-page-category', ["category"]);
+Category.propTypes = ["category"]
+export default Category

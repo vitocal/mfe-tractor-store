@@ -1,8 +1,8 @@
 <svelte:options customElement={{ tag: "checkout-components-addtocart", shadow: "none" }} />
 
 <script>
-  import data from "../database/index.js";
-  import { addToCart } from "../state.js";
+  import data from "../database/index";
+  import { addToCart } from "../state";
 
   import "./addtocart.css";
 
@@ -45,7 +45,7 @@
     {/if}
   </div>
 
-  <ds-button disabled={outOfStock ? "true" : undefined} class="c_AddToCart__button" variant="primary" type="submit">
+  <ds-button disabled={outOfStock} class="c_AddToCart__button" variant="primary" type="submit">
     add to basket
   </ds-button>
 

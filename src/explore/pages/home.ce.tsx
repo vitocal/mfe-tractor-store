@@ -1,16 +1,14 @@
-import register from "preact-custom-element";
 import { src, srcset, useUpgradedProps } from "../utils";
 
-import data from "../database/index.js";
+import data from "../database/index";
 
-import './HomePage.css';
+import './home.css';
 
-const HomePage = () => {
-
+export const Home = ({ }) => {
     const recsRef = useUpgradedProps({ skus: ["CL-01-GY", "AU-07-MT"] });
 
-    return <div data-boundary="explore">
-        <explore-header loading="eager"></explore-header>
+    return <div data-boundary-page="explore">
+        <explore-c-header loading="eager"></explore-c-header>
         <main className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>
@@ -25,15 +23,11 @@ const HomePage = () => {
                     </a>,
             )}
             <div className="e_HomePage__recommendations">
-                <explore-recommendations ref={recsRef} loading="visible"></explore-recommendations>
+                <explore-c-recommendations ref={recsRef} loading="visible"></explore-c-recommendations>
             </div>
         </main >
-        <explore-footer loading="eager"></explore-footer>
+        <explore-c-footer loading="eager"></explore-c-footer>
     </div>
 }
 
-
-
-const WebHomePage = register(HomePage, 'explore-page-home');
-
-export default WebHomePage;
+export default Home;

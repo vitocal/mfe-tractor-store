@@ -1,4 +1,4 @@
-import "./Filter.css";
+import "./filter.css";
 
 export default ({ filters }) => {
   return (

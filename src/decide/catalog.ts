@@ -1,3 +1,5 @@
+import { HTMLAttributes } from "preact";
+
 export const catalog = {
     "decide-*": async (ce_name: string) => {
         const { defineCustomElement } = await import("vue");
@@ -9,3 +11,11 @@ export const catalog = {
     }
 };
 export default catalog;
+
+declare global {
+    namespace preact.JSX {
+        interface IntrinsicElements {
+            'checkout-components-minicart': HTMLAttributes
+        }
+    }
+}

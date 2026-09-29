@@ -1,8 +1,9 @@
 <svelte:options customElement={{ tag: "checkout-pages-cart", shadow: "none" }} />
 
 <script>
-  import data from "../database/index.js";
-  import { cart, removeFromCart } from "../state.js";
+  import { upgradedProps } from "../utils";
+  import data from "../database/index";
+  import { cart, removeFromCart } from "../state";
 
   import "./cart.css";
   import LineItem from "../components/lineitem.svelte";
@@ -43,22 +44,27 @@
   $: skus = lineItems.map(({ sku }) => sku);
 </script>
 
-<explore-header></explore-header>
-<main class="c_CartPage">
-  <h2>Basket</h2>
-  <ul class="c_CartPage__lineItems">
-    {#each lineItems as item (item.sku)}
-      <LineItem {...item} onItemRemove={handleCartRemove} />
-    {/each}
-  </ul>
-  <hr />
-  <p class="c_CartPage__total">Total: ${total} Ø</p>
+<div data-boundary-page="checkout">
+  <explore-c-header></explore-c-header>
+  <main class="c_CartPage">
+    <h2>Basket</h2>
+    <ul class="c_CartPage__lineItems">
+      {#each lineItems as item (item.sku)}
+        <LineItem {...item} onItemRemove={handleCartRemove} />
+      {/each}
+    </ul>
+    {#if lineItems.length == 0}
+      <p>No items in cart</p>
+    {/if}
+    <hr />
+    <p class="c_CartPage__total">Total: ${total} Ø</p>
 
-  <div class="c_CartPage__buttons">
-    <ds-button href="#/checkout/checkout" variant="primary" data-navigo>Checkout</ds-button>
-    <ds-button href="#/" variant="secondary">Continue Shopping</ds-button>
-  </div>
+    <div class="c_CartPage__buttons">
+      <ds-button href="/checkout/checkout" variant="primary" data-navigo>Checkout</ds-button>
+      <ds-button href="/" variant="secondary" data-navigo>Continue Shopping</ds-button>
+    </div>
 
-  <explore-recommendations skus={JSON.stringify(skus)}></explore-recommendations>
-</main>
-<explore-footer></explore-footer>
+    <explore-c-recommendations use:upgradedProps={{ skus: skus }}></explore-c-recommendations>
+  </main>
+  <explore-c-footer></explore-c-footer>
+</div>

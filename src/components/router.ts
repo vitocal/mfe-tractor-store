@@ -1,16 +1,12 @@
 import Navigo from 'navigo';
 import type { Match } from 'navigo';
 
-const BASE_URL = '/pages/examples/mfe-store'
-
 class ViRouter extends HTMLElement {
     public router: Navigo | null = null;
     static get observedAttributes(): string[] {
         return ['root'];
     }
     connectedCallback() {
-        const root = this.getAttribute('root') || BASE_URL;
-
         this.router = new Navigo("/", { hash: true });
         this.setupRoutes();
         this.setupLinkInterception();
@@ -37,26 +33,26 @@ class ViRouter extends HTMLElement {
                 '/': {
                     as: 'home',
                     uses: () => {
-                        this.render('<explore-page-home data-boundary-page="explore"></explore-page-home>');
+                        this.render('<explore-p-home></explore-p-home>');
                     }
                 },
                 '/products': {
-                    as: 'explore-pages-products',
+                    as: 'explore-p-products',
                     uses: () => {
-                        this.render(`<explore-page-category data-boundary-page="explore"></explore-page-category>`);
+                        this.render(`<explore-p-category></explore-p-category>`);
                     },
                 },
                 '/products/:id': {
-                    as: 'explore-pages-products-bycategory',
+                    as: 'explore-p-products-bycategory',
                     uses: (match: Match) => {
                         const id = match.data?.id || ''
-                        this.render(`<explore-page-category data-boundary-page="explore" category="${id}"></explore-page-category>`);
+                        this.render(`<explore-p-category category="${id}"></explore-p-category>`);
                     },
                 },
                 '/stores': {
-                    as: 'explore-pages-stores',
+                    as: 'explore-p-stores',
                     uses: () => {
-                        this.render(`<explore-page-stores></explore-page-stores>`);
+                        this.render(`<explore-p-stores></explore-p-stores>`);
                     },
                 },
 

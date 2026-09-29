@@ -28,7 +28,7 @@ p {
   line-height: 1.5;
 }
 
-/* undefined states */
+/* web components states */
 :where(:not(:defined)) {
   --bg-color: #ccc;
   --stripes: var(--bg-color);
@@ -53,7 +53,7 @@ p {
   width: 100%;
 
   padding: 0.35em;
-  border-radius: 4px;
+  border-radius: 0.5rem;
 
   /* Loading states */
   &[ce="loading"] {
@@ -85,8 +85,9 @@ p {
     outline: 2px dashed red;
     outline-offset: -2px;
 
-    --stripes: indianred;
-    --bg-color: blue;
+    --bg-color: transparent;
+    background-color: indianred;
+    color: white;
 
     &::before {
       font-family: monospace;
@@ -96,6 +97,19 @@ p {
     /** Disable nested components */
     & > :not(:defined) {
       display: none;
+    }
+  }
+
+  /** This state is an error */
+  &[ce="defined"] {
+    outline: 2px dashed red;
+    --bg-color: transparent;
+    background-color: indianred;
+    color: white;
+
+    &::before {
+      font-family: monospace;
+      content: "Error: tag name is probably wrong!";
     }
   }
 }
@@ -115,7 +129,8 @@ p {
   }
 }
 
-.app {
+.tractor-app {
   width: 100dvw;
   height: 100dvh;
+  display: block;
 }

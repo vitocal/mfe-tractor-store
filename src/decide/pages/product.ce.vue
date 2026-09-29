@@ -1,45 +1,36 @@
 <template>
-  <explore-header />
-  <main class="d_ProductPage">
-    <div class="d_ProductPage__details">
-      <img
-        class="d_ProductPage__productImage"
-        :src="src(variant.image, 400)"
-        :srcset="srcset(variant.image, [400, 800])"
-        sizes="400px"
-        width="400"
-        height="400"
-        :alt="`${product.name} - ${variant.name}`"
-      />
-      <div class="d_ProductPage__productInformation">
-        <h2 class="d_ProductPage__title">{{ product.name }}</h2>
-        <ul class="d_ProductPage__highlights">
-          <li v-for="(highlight, i) in highlights" :key="i">
-            {{ highlight }}
-          </li>
-        </ul>
-        <ul class="d_ProductPage__variants">
-          <decide-components-variant
-            v-for="v in product.variants"
-            :key="v.sku"
-            v-bind="v"
-            :id="props.id"
-            :selected="v.sku === variant.sku"
-          />
-        </ul>
-        <checkout-components-addtocart :sku="variant.sku" ></checkout-components-addtocart>
+  <div data-boundary-page="decide">
+    <explore-c-header />
+    <main class="d_ProductPage">
+      <div class="d_ProductPage__details">
+        <img class="d_ProductPage__productImage" :src="src(variant.image, 400)"
+          :srcset="srcset(variant.image, [400, 800])" sizes="400px" width="400" height="400"
+          :alt="`${product.name} - ${variant.name}`" />
+        <div class="d_ProductPage__productInformation">
+          <h2 class="d_ProductPage__title">{{ product.name }}</h2>
+          <ul class="d_ProductPage__highlights">
+            <li v-for="(highlight, i) in highlights" :key="i">
+              {{ highlight }}
+            </li>
+          </ul>
+          <ul class="d_ProductPage__variants">
+            <decide-components-variant v-for="v in product.variants" :key="v.sku" v-bind="v" :id="props.id"
+              :selected="v.sku === variant.sku" />
+          </ul>
+          <checkout-components-addtocart :sku="variant.sku"></checkout-components-addtocart>
+        </div>
       </div>
-    </div>
-    <explore-recommendations ref="recsRef" />
-  </main>
-  <explore-footer />
+      <explore-c-recommendations ref="recsRef"></explore-c-recommendations>
+    </main>
+    <explore-c-footer />
+  </div>
 </template>
 
 <script setup>
 import { computed, watchEffect } from "vue";
-import { src, srcset , useUpgradedProps} from "../utils";
+import { src, srcset, useUpgradedProps } from "../utils";
 
-import data from "../database/index.js";
+import data from "../database/index";
 
 import "./product.css";
 
@@ -69,5 +60,5 @@ const variant = computed(() => {
 });
 
 // Upgrade explore-recommendations skus
-const recsRef = useUpgradedProps(() => ({skus: [variant.value.sku]}))
+const recsRef = useUpgradedProps(() => ({ skus: [variant.value.sku] }))
 </script>

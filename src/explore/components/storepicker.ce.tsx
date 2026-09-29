@@ -1,11 +1,11 @@
 import { useState, useRef } from "preact/hooks";
-import register from "preact-custom-element";
+
 import data from "../database/index";
 import { src, srcset } from "../utils";
 
 import "./StorePicker.css";
 
-function StorePicker() {
+export function StorePicker() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const rootRef = useRef(null);
   const [selectedStore, setSelectedStore] = useState(null);
@@ -100,7 +100,5 @@ function StorePicker() {
     </div>
   );
 }
-
-register(StorePicker, "explore-storepicker");
 
 export default StorePicker;

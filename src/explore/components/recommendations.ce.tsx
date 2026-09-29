@@ -1,11 +1,9 @@
-import register from "preact-custom-element";
-
 import type { RecoItem } from '../types'
 
 import data from "../database/index";
-import { Recommendation } from "./Recommendation";
+import { Recommendation } from "./recommendation";
 
-import "./Recommendations.css";
+import "./recommendations.css";
 const r = data.recommendations;
 
 export interface Props {
@@ -82,11 +80,12 @@ export const Recommendations = ({ skus }: Props) => {
   return recos.length ? (
     <div className="e_Recommendations" data-boundary="explore">
       <h2>Recommendations</h2>
-      <ul className="e_Recommendations_list">{recos.map(Recommendation)}</ul>
+      <ul className="e_Recommendations_list">{recos.map((r) => <Recommendation {...r} />)}</ul>
     </div>
   ) : (
     <></>
   );
 };
+Recommendations.propTypes = ["skus"]
 
-export default register(Recommendations, "explore-recommendations", ["skus"]);
+export default Recommendations;

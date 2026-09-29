@@ -1,8 +1,6 @@
-import register from "preact-custom-element";
+import Navigation from "./navigation";
 
-import Navigation from "./Navigation";
-
-import "./Header.css";
+import "./header.css";
 
 export interface Props { };
 
@@ -29,4 +27,4 @@ const Header = () => {
   );
 };
 
-export default register(Header, "explore-header");
+export default Header;

@@ -1,6 +1,4 @@
-// for prettier formatting
-// see https://prettier.io/docs/en/options.html#embedded-language-formatting
-export const html = String.raw;
+import type { Action } from 'svelte/action';
 
 // use the image server if not using local images
 export const IMAGE_SERVER = "";
@@ -33,3 +31,43 @@ export function srcset(image: string, sizes: number[] = []) {
 export function fmtprice(price: number) {
   return `${price},00 Ø`;
 }
+
+
+/**
+ * A Svelte Action that defers setting properties on a Custom Element
+ * until the element is registered and upgraded in customElements.
+ */
+export const upgradedProps: Action<HTMLElement, Record<string, unknown>> = (node, initialProps) => {
+  let currentProps = initialProps;
+  let isMounted = true;
+
+  const tag = node.tagName.toLowerCase();
+
+  const applyProps = () => {
+    if (isMounted && node.isConnected) {
+      Object.assign(node, currentProps);
+    }
+  };
+
+  const sync = () => {
+    if (customElements.get(tag)) {
+      applyProps();
+    } else {
+      customElements.whenDefined(tag).then(applyProps);
+    }
+  };
+
+  // Initial check/deferral on mount
+  sync();
+
+  return {
+    // Called by Svelte whenever reactive arguments passed to use:upgradedProps change
+    update(newProps) {
+      currentProps = newProps;
+      sync();
+    },
+    destroy() {
+      isMounted = false;
+    }
+  };
+};

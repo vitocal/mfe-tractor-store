@@ -23,12 +23,12 @@
 </script>
 
 <li class="c_LineItem">
-  <a href={url} class="c_LineItem__image">
+  <a href={url} class="c_LineItem__image" data-navigo>
     <img src={src(image, 200)} srcset={srcset(image, [200, 400])} sizes="200px" alt={name} width="200" height="200" />
   </a>
 
   <div class="c_LineItem__details">
-    <a href={url} class="c_LineItem__name">
+    <a href={url} class="c_LineItem__name" data-navigo>
       <strong>{name}</strong><br />{sku}
     </a>
 

@@ -39,11 +39,13 @@
   });
 </script>
 
-<explore-header></explore-header>
-<main class="c_Thanks">
-  <h2 class="c_Thanks__title">Thanks for your order!</h2>
-  <p class="c_Thanks__text">We'll notify you, when its ready for pickup.</p>
+<div data-boundary-page="checkout">
+  <explore-c-header></explore-c-header>
+  <main class="c_Thanks">
+    <h2 class="c_Thanks__title">Thanks for your order!</h2>
+    <p class="c_Thanks__text">We'll notify you, when its ready for pickup.</p>
 
-  <ds-button href="/" variant="secondary" data-navigo>Continue Shopping</ds-button>
-</main>
-<explore-footer></explore-footer>
+    <ds-button href="/" variant="secondary" data-navigo>Continue Shopping</ds-button>
+  </main>
+  <explore-c-footer></explore-c-footer>
+</div>

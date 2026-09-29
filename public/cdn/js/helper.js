@@ -208,59 +208,7 @@ function showToggleButton() {
 }
 
 /**
- * Function to copy styles to shadow root.
- * @param {ShadowRoot} shadowRoot - The shadow root.
- */
-function copyStylesToShadow(shadowRoot) {
-  const style = document.getElementById("boundaries");
-  if (style && shadowRoot && shadowRoot.getElementById("boundaries") === null) {
-    shadowRoot.appendChild(style.cloneNode(true));
-  }
-}
-
-/**
- * Function to handle existing shadow roots.
- */
-function handleExistingShadowRoots() {
-  document.querySelectorAll("*").forEach((el) => {
-    if (el.shadowRoot) {
-      copyStylesToShadow(el.shadowRoot);
-    }
-  });
-}
-
-/**
- * Function to watch for shadow roots.
- */
-function watchForShadowRoots() {
-  // Observe new elements with shadow DOM
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.shadowRoot) {
-          copyStylesToShadow(node.shadowRoot);
-        }
-        // Check for custom elements added to the DOM tree
-        if (node.querySelectorAll) {
-          node.querySelectorAll("*").forEach((el) => {
-            if (el.shadowRoot) {
-              copyStylesToShadow(el.shadowRoot);
-            }
-          });
-        }
-      });
-    });
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
-}
-
-/**
  * initialize
  */
 setBasicStyles();
 showToggleButton();
-handleExistingShadowRoots();
-watchForShadowRoots();

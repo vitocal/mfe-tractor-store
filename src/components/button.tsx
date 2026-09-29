@@ -40,7 +40,7 @@ const Button: FunctionalComponent<Props> = ({
 
   return (
     <Tag
-      disabled={href ? undefined : disabled}
+      disabled={href ? undefined : disabled || undefined}
       href={href || undefined}
       type={href ? undefined : type}
       value={value || undefined}
