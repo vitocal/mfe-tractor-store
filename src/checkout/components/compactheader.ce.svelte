@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-components-compactheader", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-c-compactheader", shadow: "none" }} />
 
 <script>
   import "./compactheader.css";

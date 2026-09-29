@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-components-addtocart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-c-addtocart", shadow: "none" }} />
 
 <script>
   import data from "../database/index";

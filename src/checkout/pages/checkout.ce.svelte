@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-pages-checkout", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-p-checkout", shadow: "none" }} />
 
 <script>
   import { onMount, tick } from "svelte";
@@ -46,7 +46,7 @@
 </script>
 
 <div data-boundary-page="checkout">
-  <checkout-components-compactheader></checkout-components-compactheader>
+  <checkout-c-compactheader></checkout-c-compactheader>
   <main class="c_Checkout">
     <h2>Checkout</h2>
     <form class="c_Checkout__form" bind:this={formElement} on:input={validateForm} on:submit={handleSubmit}>

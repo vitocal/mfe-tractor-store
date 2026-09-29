@@ -15,7 +15,7 @@ const Stores = () => {
                 following locations:
             </p>
             <ul class="e_StoresPage_list">
-                {data.stores.map(Store)}
+                {data.stores.map((store) => <Store {...store} />)}
             </ul>
         </main>
         <explore-c-footer loading="eager"></explore-c-footer>

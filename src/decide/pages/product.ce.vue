@@ -14,10 +14,10 @@
             </li>
           </ul>
           <ul class="d_ProductPage__variants">
-            <decide-components-variant v-for="v in product.variants" :key="v.sku" v-bind="v" :id="props.id"
-              :selected="v.sku === variant.sku"></decide-components-variant>
+            <decide-c-variant v-for="v in product.variants" :key="v.sku" v-bind="v" :id="props.id"
+              :selected="v.sku === variant.sku"></decide-c-variant>
           </ul>
-          <checkout-components-addtocart :sku="variant.sku"></checkout-components-addtocart>
+          <checkout-c-addtocart :sku="variant.sku"></checkout-c-addtocart>
         </div>
       </div>
       <div class="d_ProductPage__notfound" v-else>

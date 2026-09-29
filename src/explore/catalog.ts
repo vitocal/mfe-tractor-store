@@ -1,16 +1,11 @@
 const folderMap = {
   "c": "components/",
-  "components": "components",
+  "components": "components/",
   "p": "pages/",
   "pages": "pages/"
 }
 
 export const catalog = {
-  // "explore-header": () => import("./components/header"),
-  // "explore-recommendations": () => import("./components/recommendations"),
-  // "explore-footer": () => import("./components/footer"),
-  // "explore-storepicker": () => import("./components/storepicker"),
-
   "explore-*": async (ce_name: string) => {
     const register = (await import("preact-custom-element")).default;
 

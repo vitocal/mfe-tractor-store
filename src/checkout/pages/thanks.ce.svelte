@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-pages-thanks", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-p-thanks", shadow: "none" }} />
 
 <script>
   import { onMount } from "svelte";

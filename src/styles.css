@@ -60,11 +60,6 @@ p {
     opacity: 0.8;
     cursor: wait;
 
-    &::before {
-      content: "Loading...";
-      font-family: monospace;
-    }
-
     &::after {
       pointer-events: none;
       content: " ";
@@ -76,7 +71,7 @@ p {
 
       background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
       will-change: transform;
-      animation: shimmer 1.5s ease-in-out infinite;
+      animation: shimmer 2.5s ease-in-out infinite;
     }
   }
 

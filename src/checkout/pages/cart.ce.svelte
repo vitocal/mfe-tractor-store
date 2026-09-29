@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-pages-cart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-p-cart", shadow: "none" }} />
 
 <script>
   import { upgradedProps } from "../utils";
@@ -6,7 +6,7 @@
   import { cart, removeFromCart } from "../state";
 
   import "./cart.css";
-  import LineItem from "../components/lineitem.svelte";
+  import LineItem from "../components/lineitem.ce.svelte";
 
   /**
    * Converts state line items to cart line items.

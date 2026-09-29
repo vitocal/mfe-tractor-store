@@ -65,7 +65,7 @@ class ViRouter extends HTMLElement {
                         const id = match.data?.id
                         const sku = match.params?.sku || ''
 
-                        this.render(`<decide-pages-product data-boundary-page="decide" id="${id}" sku="${sku}"></decide-pages-product>`);
+                        this.render(`<decide-p-product id="${id}" sku="${sku}"></decide-p-product>`);
                     }
                 },
 
@@ -75,19 +75,19 @@ class ViRouter extends HTMLElement {
                 '/checkout/cart': {
                     as: 'checkout-pages-cart',
                     uses: () => {
-                        this.render('<checkout-pages-cart data-boundary-page="checkkout"></checkout-pages-cart>')
+                        this.render('<checkout-p-cart ></checkout-p-cart>')
                     }
                 },
                 '/checkout/checkout': {
                     as: 'checkout-pages-checkout',
                     uses: () => {
-                        this.render('<checkout-pages-checkout data-boundary-page="checkkout"></checkout-pages-checkout>')
+                        this.render('<checkout-p-checkout></checkout-p-checkout>')
                     }
                 },
                 '/checkout/thanks': {
                     as: 'checkout-pages-thanks',
                     uses: () => {
-                        this.render('<checkout-pages-thanks data-boundary-page="checkout"></checkout-pages-thanks>')
+                        this.render('<checkout-p-thanks></checkout-p-thanks>')
                     }
                 }
             })

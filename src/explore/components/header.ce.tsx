@@ -19,7 +19,7 @@ const Header = () => {
             <Navigation />
           </div>
           <div className="e_Header__cart">
-            <checkout-components-minicart></checkout-components-minicart>
+            <checkout-c-minicart></checkout-c-minicart>
           </div>
         </div>
       </div>

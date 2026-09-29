@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-components-minicart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-c-minicart", shadow: "none" }} />
 
 <script>
   import { onMount } from "svelte";
