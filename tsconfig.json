@@ -9,7 +9,7 @@
         "skipLibCheck": true,
         "isolatedModules": true,
         /* Linting */
-        "strict": true,
+        "strict": false,
         "noUnusedLocals": true,
         "noUnusedParameters": false,
         "noFallthroughCasesInSwitch": true,

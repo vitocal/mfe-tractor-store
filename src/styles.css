@@ -1,7 +1,6 @@
 @font-face {
   font-family: "Raleway";
-  src: url("https://blueprint.the-tractor.store/cdn/font/raleway-regular.woff2")
-    format("woff2");
+  src: url("https://blueprint.the-tractor.store/cdn/font/raleway-regular.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -30,39 +29,74 @@ p {
 }
 
 /* undefined states */
-:not(:defined) {
-  display: block;
+:where(:not(:defined)) {
+  --bg-color: #ccc;
+  --stripes: var(--bg-color);
+
+  --color-bg-dark: #999;
+  --bg: repeating-linear-gradient(45deg, var(--stripes) 0px, var(--stripes) 10px, transparent 10px, transparent 20px);
+
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+
+  overflow: hidden;
+  isolation: isolate;
+  contain: layout;
+
+  background-image: var(--bg);
+  background-position: 0 0;
+
   min-height: 1lh;
   min-width: 100%;
   height: auto;
   width: 100%;
-}
 
-/* Loading states */
-[ce="loading"] {
-  opacity: 0.5;
-  filter: grayscale(1);
+  padding: 0.35em;
+  border-radius: 4px;
 
-  background-color: #eee;
-  --color-bg-dark: #aaa;
+  /* Loading states */
+  &[ce="loading"] {
+    opacity: 0.8;
+    cursor: wait;
 
-  &::after {
-    pointer-events: none;
-    content: " ";
-    position: absolute;
-    inset: 0;
+    &::before {
+      content: "Loading...";
+      font-family: monospace;
+    }
 
-    transform: translateX(-100%);
-    width: 100%;
+    &::after {
+      pointer-events: none;
+      content: " ";
+      position: absolute;
+      inset: 0;
 
-    background: linear-gradient(
-      to right,
-      transparent 10%,
-      var(--color-bg-dark) 50%,
-      transparent 90%
-    );
-    will-change: transform;
-    animation: shimmer 1.5s ease-in-out infinite;
+      transform: translateX(-100%);
+      width: 100%;
+
+      background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
+      will-change: transform;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+  }
+
+  &[ce="error"] {
+    padding: 0.25em 0.5em;
+    outline: 2px dashed red;
+    outline-offset: -2px;
+
+    --stripes: indianred;
+    --bg-color: blue;
+
+    &::before {
+      font-family: monospace;
+      content: attr(error);
+    }
+
+    /** Disable nested components */
+    & > :not(:defined) {
+      display: none;
+    }
   }
 }
 
@@ -70,18 +104,13 @@ p {
   opacity: 1;
 }
 
-[ce="error"] {
-  background-color: red;
-
-  /** Disable nested components */
-  & > :not(:defined) {
-    display: none;
-  }
-}
-
 /* Shimmer/skeleton */
 @keyframes shimmer {
-  to {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
     transform: translateX(100%);
   }
 }

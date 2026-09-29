@@ -1,6 +1,4 @@
-// for prettier formatting
-// see https://prettier.io/docs/en/options.html#embedded-language-formatting
-export const html = String.raw;
+import { ref, watchEffect, onUnmounted, type Ref } from 'vue';
 
 // use the image server if not using local images
 export const IMAGE_SERVER = "";
@@ -32,4 +30,45 @@ export function srcset(image: string, sizes: number[] = []) {
  */
 export function fmtprice(price: number) {
   return `${price},00 Ø`;
+}
+
+/**
+ * A Vue 3 composable that defers assigning complex properties to a Custom Element
+ * until the element has been registered and upgraded in the browser.
+ *
+ * @param propsGetter A reactive getter function returning the properties to assign.
+ * @returns A template ref to attach to the custom element in JSX or template.
+ */
+export function useUpgradedProps<T extends HTMLElement = HTMLElement>(
+  propsGetter: () => Record<string, unknown>
+): Ref<T | null> {
+  const elRef = ref<T | null>(null) as Ref<T | null>;
+  let isDisposed = false;
+
+  onUnmounted(() => {
+    isDisposed = true;
+  });
+
+  watchEffect(() => {
+    const domNode = elRef.value;
+    const props = propsGetter();
+
+    if (!domNode) return;
+
+    const tag = domNode.tagName.toLowerCase();
+
+    const applyProps = () => {
+      if (!isDisposed && domNode.isConnected) {
+        Object.assign(domNode, props);
+      }
+    };
+
+    if (customElements.get(tag)) {
+      applyProps();
+    } else {
+      customElements.whenDefined(tag).then(applyProps);
+    }
+  });
+
+  return elRef;
 }

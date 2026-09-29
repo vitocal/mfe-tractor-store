@@ -42,6 +42,6 @@ const isSelected = computed(() => {
 
 const vi_router = document.querySelector("vi-router");
 const pages_product_url = computed(() => {
-  return vi_router.router.generate("decides-pages-product", { id: props.id });
+  return vi_router.router.generate("decide-pages-product", { id: props.id });
 });
 </script>

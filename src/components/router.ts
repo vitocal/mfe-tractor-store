@@ -53,12 +53,18 @@ class ViRouter extends HTMLElement {
                         this.render(`<explore-page-category data-boundary-page="explore" category="${id}"></explore-page-category>`);
                     },
                 },
+                '/stores': {
+                    as: 'explore-pages-stores',
+                    uses: () => {
+                        this.render(`<explore-page-stores></explore-page-stores>`);
+                    },
+                },
 
                 /**
                  * Team Decide
                  */
                 '/product/:id': {
-                    as: 'decides-pages-product',
+                    as: 'decide-pages-product',
                     uses: (match: Match) => {
                         const id = match.data?.id
                         const sku = match.params?.sku || ''

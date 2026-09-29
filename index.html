@@ -17,21 +17,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <link rel="stylesheet" href="./src/styles.css" />
-<script type="importmap">
-      {
-        "imports": {
-          "ce-autoloader": "https://esm.sh/ce-autoloader"
-        }
-      }
-  </script>
+
 <script type="module" src="./src/components/router.ts"></script>
-<script type="module" src="./src/app.ts" defer></script>
 
 <script src="/cdn/js/helper.js" defer></script>
 </head>
 
 <body>
   <vi-router class="tractor-app"></vi-router>
+  <script type="module" src="./src/app.ts"></script>
 </body>
 
 </html>

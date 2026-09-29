@@ -1,8 +1,8 @@
 import register from "preact-custom-element";
 
-import data from "../database/index.js";
-import Product from "../components/Product.jsx";
-import Filter from "../components/Filter.jsx";
+import data from "../database/index";
+import Product from "../components/Product";
+import Filter from "../components/Filter";
 
 import './CategoryPage.css';
 

@@ -6,6 +6,7 @@ export const catalog = {
 
   "explore-page-home": () => import("./pages/HomePage"),
   "explore-page-category": () => import("./pages/CategoryPage"),
+  "explore-page-stores": () => import("./pages/stores")
 };
 
 export default catalog;
@@ -15,7 +16,7 @@ export default catalog;
  * Typescript specs
 */
 import type { HTMLAttributes, ComponentType } from "preact";
-export type PreactProps = HTMLAttributes<HTMLElement> | ComponentType;
+export type PreactProps = HTMLAttributes<HTMLElement> | ComponentType & { loading: "eager" | "visible" | string };
 
 import type { Props as HeaderProps } from "./components/Header";
 import type { Props as FooterProps } from "./components/Footer";

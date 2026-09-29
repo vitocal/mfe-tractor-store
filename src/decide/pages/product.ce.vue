@@ -30,14 +30,15 @@
         <checkout-components-addtocart :sku="variant.sku" ></checkout-components-addtocart>
       </div>
     </div>
-    <explore-recommendations :skus="JSON.stringify([variant.sku])" />
+    <explore-recommendations ref="recsRef" />
   </main>
   <explore-footer />
 </template>
 
 <script setup>
 import { computed, watchEffect } from "vue";
-import { src, srcset } from "../utils.js";
+import { src, srcset , useUpgradedProps} from "../utils";
+
 import data from "../database/index.js";
 
 import "./product.css";
@@ -66,4 +67,7 @@ const variant = computed(() => {
   const variants = product.value.variants || [];
   return variants.find((v) => v.sku === props.sku) || variants[0] || {};
 });
+
+// Upgrade explore-recommendations skus
+const recsRef = useUpgradedProps(() => ({skus: [variant.value.sku]}))
 </script>

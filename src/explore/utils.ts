@@ -1,6 +1,4 @@
-// for prettier formatting
-// see https://prettier.io/docs/en/options.html#embedded-language-formatting
-export const html = String.raw;
+import { useRef, useEffect } from 'preact/hooks';
 
 // use the image server if not using local images
 export const IMAGE_SERVER = "";
@@ -32,4 +30,66 @@ export function srcset(image: string, sizes: number[] = []) {
  */
 export function fmtprice(price: number) {
   return `${price},00 Ø`;
+}
+
+/**
+ * Useful for passing complex properties like arrays objects to custom elements.
+ * Applies complex properties to a Custom Element after it has been upgraded in the browser.
+ *
+ * @param props An object containing the properties/props to set on the DOM node.
+ * @return A Preact/React compatible ref callback function.
+ */
+export function lazyProps<T extends HTMLElement = HTMLElement>(
+  props: Record<string, unknown>
+): (domNode: T | null) => void {
+  return (domNode: T | null): void => {
+    if (!domNode) return;
+
+    const tag = domNode.tagName.toLowerCase();
+
+    if (customElements.get(tag)) {
+      // Custom element is already defined; set properties directly
+      Object.assign(domNode, props);
+    } else {
+      // Defer assignment until the browser registers the element
+      customElements.whenDefined(tag).then(() => {
+        if (domNode.isConnected) {
+          Object.assign(domNode, props);
+        }
+      });
+    }
+  };
+}
+
+/**
+ * Pass complex properties like arrays objects to an custom element after they're upgraded.
+ *
+ * @param props An object containing the properties/props to set on the DOM node.
+ * @return A Preact/React compatible ref callback function.
+ */
+export function useUpgradedProps<T extends HTMLElement = HTMLElement>(
+  props: Record<string, unknown>
+) {
+  const nodeRef = useRef<T | null>(null);
+
+  useEffect(() => {
+    const domNode = nodeRef.current;
+    if (!domNode) return;
+
+    const tag = domNode.tagName.toLowerCase();
+
+    const applyProps = () => {
+      if (domNode.isConnected) {
+        Object.assign(domNode, props);
+      }
+    };
+
+    if (customElements.get(tag)) {
+      applyProps();
+    } else {
+      customElements.whenDefined(tag).then(applyProps);
+    }
+  }, [props]); // Re-runs whenever `props` reference or reactive values inside change
+
+  return nodeRef;
 }

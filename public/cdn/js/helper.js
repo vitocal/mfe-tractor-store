@@ -101,16 +101,13 @@ function toggleBoundaries(active) {
  * Show toggle button.
  */
 function showToggleButton() {
-  const showBoundaries =
-    window.localStorage.getItem("showBoundaries") === "true";
+  const showBoundaries = window.localStorage.getItem("showBoundaries") === "true";
   toggleBoundaries(showBoundaries);
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.checked = showBoundaries;
-  checkbox.addEventListener("change", (e) =>
-    toggleBoundaries(e.target.checked),
-  );
+  checkbox.addEventListener("change", (e) => toggleBoundaries(e.target.checked));
 
   const checkboxView = document.createElement("div");
   checkboxView.classList.add("toggleView");
@@ -126,15 +123,15 @@ function showToggleButton() {
   const style = document.createElement("style");
   style.innerHTML = `
     .showBoundariesToggle {
-      position: fixed; 
-      bottom: 10px; 
-      left: 10px; 
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
       border-radius: 10px;
       display: flex;
-      background-color: rgba(255, 255, 255, 0.8); 
-      -webkit-user-select: none; 
+      background-color: rgba(255, 255, 255, 0.8);
+      -webkit-user-select: none;
       user-select: none;
-      box-shadow: 0 0 20px 10px rgba(235, 91, 89, 0.05);  
+      box-shadow: 0 0 20px 10px rgba(235, 91, 89, 0.05);
       border: 1px solid #eeebe2;
       backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
@@ -147,7 +144,7 @@ function showToggleButton() {
 
     .showBoundariesToggle label {
       cursor: pointer;
-      padding: 20px; 
+      padding: 20px;
       display: flex;
     }
 

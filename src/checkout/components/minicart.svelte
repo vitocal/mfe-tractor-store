@@ -53,6 +53,7 @@
       class="c_MiniCart__button"
       title="View Cart"
       data-navigo
+      loading="eager"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="33" height="33" viewBox="0 0 33 33" fill="none">
         <g clip-path="url(#a)">
