@@ -45,7 +45,7 @@
 </script>
 
 <div data-boundary-page="checkout">
-  <explore-c-header></explore-c-header>
+  <explore-components-header></explore-components-header>
   <main class="c_CartPage">
     <h2>Basket</h2>
     <ul class="c_CartPage__lineItems">
@@ -64,7 +64,7 @@
       <ds-button href="/" variant="secondary" data-navigo>Continue Shopping</ds-button>
     </div>
 
-    <explore-c-recommendations use:upgradedProps={{ skus: skus }}></explore-c-recommendations>
+    <explore-components-recommendations use:upgradedProps={{ skus: skus }}></explore-components-recommendations>
   </main>
-  <explore-c-footer></explore-c-footer>
+  <explore-components-footer></explore-components-footer>
 </div>

@@ -1,3 +1,5 @@
+import register from "preact-custom-element";
+
 import type { RecoItem } from '../types'
 
 import data from "../database/index";
@@ -88,4 +90,4 @@ export const Recommendations = ({ skus }: Props) => {
 };
 Recommendations.propTypes = ["skus"]
 
-export default Recommendations;
+export default register(Recommendations, 'explore-components-recommendations');

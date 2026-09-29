@@ -1,5 +1,5 @@
 {
-  "name": "mfe-tractor-store",
+  "name": "@vitocal/tractorstore",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,14 +8,12 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "workspaces": [
+    "explore"
+  ],
   "dependencies": {
     "ce-autoloader": "^0.1.2",
-    "navigo": "^8.11.1",
-    "preact": "^11.0.0-rc.2",
-    "preact-custom-element": "^4.6.0",
-    "react": "npm:@preact/compat",
-    "react-dom": "npm:@preact/compat",
-    "vue": "^3.5.13"
+    "navigo": "^8.11.1"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

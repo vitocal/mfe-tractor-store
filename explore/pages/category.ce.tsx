@@ -1,3 +1,5 @@
+import register from "preact-custom-element";
+
 import data from "../database/index";
 import Product from "../components/product";
 import Filter from "../components/filter";
@@ -26,7 +28,7 @@ export const Category = ({ category }: { category: String }) => {
   ];
 
   return (<div data-boundary-page="explore">
-    <explore-c-header ></explore-c-header>
+    <explore-components-header ></explore-components-header>
     <main className="e_CategoryPage">
       <h2>{title}</h2>
       <div className="e_CategoryPage__subline">
@@ -37,9 +39,9 @@ export const Category = ({ category }: { category: String }) => {
         {products.map((p) => <Product {...p} />)}
       </ul>
     </main>
-    <explore-c-footer ></explore-c-footer>
+    <explore-components-footer ></explore-components-footer>
   </div>);
 };
 
 Category.propTypes = ["category"]
-export default Category
+export default register(Category, 'explore-pages-category');

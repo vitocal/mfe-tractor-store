@@ -1,3 +1,5 @@
+import register from "preact-custom-element";
+
 import "./Footer.css";
 
 export interface Props { };
@@ -47,4 +49,4 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+export default register(Footer, 'explore-components-footer');

@@ -65,7 +65,7 @@
       <h3>Store Pickup</h3>
       <fieldset>
         <div class="c_Checkout__store" bind:this={storePickerElement}>
-          <explore-c-storepicker></explore-c-storepicker>
+          <explore-components-storepicker></explore-components-storepicker>
         </div>
         <label class="c_Checkout__label" for="c_storeId">Store ID</label>
         <input
@@ -85,5 +85,5 @@
       </div>
     </form>
   </main>
-  <explore-c-footer></explore-c-footer>
+  <explore-components-footer></explore-components-footer>
 </div>

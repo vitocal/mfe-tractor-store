@@ -18,9 +18,10 @@ export default defineConfig({
     svelte({ compilerOptions: { customElement: true } }),
   ],
   build: {
-    outDir: "dir/",
+    outDir: "dist/",
     emptyOutDir: true,
     modulePreload: false,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
         entryFileNames: "[name].js",

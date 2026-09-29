@@ -1,0 +1,29 @@
+{
+  "name": "@vitocal/tractor-explore",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/catalog.js",
+  "module": "./dist/catalog.js",
+  "exports": {
+    ".": "./dist/catalog.js",
+    "./chunks/*": "./dist/chunks/*",
+    "./assets/*": "./dist/assets/*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "preact": "^11.0.0-rc.2",
+    "preact-custom-element": "^4.6.0",
+    "react": "npm:@preact/compat",
+    "react-dom": "npm:@preact/compat"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "vite": "^8.3.1"
+  }
+}

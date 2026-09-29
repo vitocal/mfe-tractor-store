@@ -1,3 +1,5 @@
+import register from "preact-custom-element";
+
 import { useState, useRef } from "preact/hooks";
 
 import data from "../database/index";
@@ -101,4 +103,4 @@ export function StorePicker() {
   );
 }
 
-export default StorePicker;
+export default register(StorePicker, 'explore-components-storepicker');

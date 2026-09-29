@@ -1,6 +1,6 @@
 <template>
   <div data-boundary-page="decide">
-    <explore-c-header></explore-c-header>
+    <explore-components-header></explore-components-header>
     <main class="d_ProductPage">
       <div class="d_ProductPage__details" v-if="product?.name">
         <img class="d_ProductPage__productImage" :src="src(variant?.image, 400)"
@@ -24,9 +24,9 @@
         <h1>Product not found</h1>
       </div>
 
-      <explore-c-recommendations ref="recsRef"></explore-c-recommendations>
+      <explore-components-recommendations ref="recsRef"></explore-components-recommendations>
     </main>
-    <explore-c-footer></explore-c-footer>
+    <explore-components-footer></explore-components-footer>
   </div>
 </template>
 

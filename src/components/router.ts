@@ -33,26 +33,26 @@ class ViRouter extends HTMLElement {
                 '/': {
                     as: 'home',
                     uses: () => {
-                        this.render('<explore-p-home></explore-p-home>');
+                        this.render('<explore-pages-home></explore-pages-home>');
                     }
                 },
                 '/products': {
                     as: 'explore-p-products',
                     uses: () => {
-                        this.render(`<explore-p-category></explore-p-category>`);
+                        this.render(`<explore-pages-category></explore-pages-category>`);
                     },
                 },
                 '/products/:id': {
                     as: 'explore-p-products-bycategory',
                     uses: (match: Match) => {
                         const id = match.data?.id || ''
-                        this.render(`<explore-p-category category="${id}"></explore-p-category>`);
+                        this.render(`<explore-pages-category category="${id}"></explore-pages-category>`);
                     },
                 },
                 '/stores': {
                     as: 'explore-p-stores',
                     uses: () => {
-                        this.render(`<explore-p-stores></explore-p-stores>`);
+                        this.render(`<explore-pages-stores></explore-pages-stores>`);
                     },
                 },
 

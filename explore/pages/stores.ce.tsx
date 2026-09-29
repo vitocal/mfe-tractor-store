@@ -1,3 +1,5 @@
+import register from "preact-custom-element";
+
 import data from "../database/index";
 
 import Store from "../components/store"
@@ -6,7 +8,7 @@ import './stores.css';
 
 const Stores = () => {
     return <div data-boundary-page="explore">
-        <explore-c-header loading="eager"></explore-c-header>
+        <explore-components-header loading="eager"></explore-components-header>
         <main class="e_StoresPage">
             <h2>Our Stores</h2>
             <p>
@@ -18,8 +20,8 @@ const Stores = () => {
                 {data.stores.map((store) => <Store {...store} />)}
             </ul>
         </main>
-        <explore-c-footer loading="eager"></explore-c-footer>
+        <explore-components-footer loading="eager"></explore-components-footer>
     </div>
 }
 
-export default Stores;
+export default register(Stores, 'explore-pages-stores');
