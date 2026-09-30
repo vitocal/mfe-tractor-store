@@ -13,6 +13,8 @@
         "noUnusedLocals": true,
         "noUnusedParameters": false,
         "noFallthroughCasesInSwitch": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
         /* Decorators */
         "experimentalDecorators": true,
         "paths": {

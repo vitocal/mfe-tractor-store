@@ -1,27 +1,13 @@
 import { defineConfig } from "vite";
 
 import preact from "@preact/preset-vite";
-import history from "connect-history-api-fallback";
-
-function historyFallbackPlugin(): Plugin {
-  return {
-    name: "history-fallback-plugin",
-    configureServer(server) {
-      server.middlewares.use(
-        history({
-          index: "/playground/index.html",
-          htmlAcceptHeaders: ["text/html", "application/xhtml+xml"],
-        }) as any
-      );
-    },
-  };
-}
+import playgroundFallback from "./playground/server.ts";
 
 export default defineConfig({
   base: "./",
   plugins: [
     preact({ reactAliasesEnabled: true, prefreshEnabled: false }),
-    historyFallbackPlugin(),
+    playgroundFallback(),
   ],
   build: {
     outDir: "dist",
@@ -32,7 +18,8 @@ export default defineConfig({
     cssCodeSplit: true,
     rollupOptions: {
       input: {
-        'catalog': './catalog.ts'
+        'catalog': './catalog.ts',
+        'routes': './routes.ts'
       },
       // Ensure entry point exports are treated as public module exports
       preserveEntrySignatures: "allow-extension",

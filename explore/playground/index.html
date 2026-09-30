@@ -17,9 +17,18 @@
             height: 100vh;
         }
 
+        :root {
+            --outer-space: 1.5rem;
+        }
+
         main {
             font-family: Raleway, "Helvetica Neue", Helvetica, Arial, sans-serif;
             font-size: 16px;
+
+            flex: 1;
+            padding: 2rem;
+            background: #ffffff;
+            overflow-y: auto;
         }
 
         aside {
@@ -62,14 +71,13 @@
                     color: #ffffff;
                     font-weight: 500;
                 }
-            }
-        }
 
-        main {
-            flex: 1;
-            padding: 2rem;
-            background: #ffffff;
-            overflow-y: auto;
+                & small {
+                    display: block;
+                    opacity: 0.6;
+                    font-size: 0.75rem;
+                }
+            }
         }
     </style>
     <style>
@@ -173,59 +181,107 @@
 
 <body>
     <aside>
+        <h2>Explore Pages</h2>
+        <ul id="route-list"></ul>
+
         <h2>Explore Components</h2>
         <ul id="component-list"></ul>
     </aside>
 
-    <main id="component-stage">
-        <!-- Active custom element renders here -->
+    <main id="stage">
+        <!-- Active page/component renders here -->
     </main>
 
     <!-- Vite imports the dev runner -->
     <script type="module">
         import CEAutoLoader from "ce-autoloader"
         import catalog from "/catalog.ts";
+        import { createRouter } from "/router.ts";
+        import routes from "/routes.ts";
 
-        let components = Object.keys(catalog);
-        let registry = new CEAutoLoader({ catalog });
+        const components = Object.keys(catalog);
+        const registry = new CEAutoLoader({ catalog });
 
-        function init() {
-            initDevCatalogViewer();
+        /**
+         * Playground only route, previews a single component of the team.
+         * It lives here (and not on the team route table) because it's a dev
+         * tool, never an app page.
+         */
+        const preview = {
+            name: "component-preview",
+            path: "/components/:tag",
+            render: ({ tag }) => `<${tag}></${tag}>`,
+        };
+
+        const notFound = {
+            name: "not-found",
+            path: "*",
+            render: () => `<h1>404 Not Found</h1>`
+        };
+
+        const router = createRouter([...routes, preview], { notFound });
+
+        /** Custom elements referenced by the given html */
+        function tagsIn(html) {
+            return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
         }
 
-        function initDevCatalogViewer() {
-            const navList = document.getElementById("component-list");
-            const stage = document.getElementById("component-stage");
+        function init() {
+            const routeList = document.getElementById("route-list");
+            const componentList = document.getElementById("component-list");
+            const stage = document.getElementById("stage");
 
-            if (!navList || !stage) return;
+            if (!routeList || !componentList || !stage) return;
 
-            // Render HTML list items
-            navList.innerHTML = components.map((comp) =>
-                `<li><a href="${comp}" data-tag="${comp}">${comp}</a></li>`
-            ).join("");
+            // Team routes, with their readable path (like the shell app)
+            routeList.innerHTML = routes
+                .map(({ name, path }) => `<li><a href="${path}" data-navigo data-route="${name}">${name}<small>${path}</small></a></li>`)
+                .join("");
 
-            function renderSelectedComponent() {
-                // URL: http://localhost:5173/playground/stores -> slug: "stores"
-                const pathname = window.location.pathname;
-                const slug = pathname.split("/").pop();
+            // Every catalog entry can be previewed on its own
+            componentList.innerHTML = components
+                .map((tag) => `<li><a href="/components/${tag}" data-navigo data-tag="${tag}">${tag}</a></li>`)
+                .join("");
 
-                const selected = components.find((c) => c === slug) || components[0];
-                if (!selected) return;
+            const links = [...routeList.querySelectorAll("a"), ...componentList.querySelectorAll("a")];
 
-                registry.preload([selected]);
+            function renderRoute() {
+                // URL: http://localhost:4001/products/classic -> render callback of "products-by-category"
+                const result = router.render(window.location.pathname);
+                const match = result?.match;
+                const previewTag = match?.name === preview.name ? match.params.tag : null;
 
-                // Highlight active link
-                navList?.querySelectorAll("a").forEach((link) => {
-                    link.classList.toggle("active", link.getAttribute("data-tag") === selected);
+                // Highlight the active route (or the previewed component)
+                links.forEach((link) => {
+                    const active = previewTag
+                        ? link.dataset.tag === previewTag
+                        : link.dataset.route === match?.name;
+
+                    link.classList.toggle("active", active);
                 });
 
-                // Clear stage and insert the custom element tag dynamically
-                stage.innerHTML = `<${selected}></${selected}>`;
+                // Preload the page custom-element, then render the route html
+                // registry.preload((result ? tagsIn(result.html) : []).filter((tag) => tag in catalog));
+                stage.innerHTML = result?.html ?? "";
             }
 
+            // Intercept app links (data-navigo), navigating client-side like the shell app
+            document.addEventListener("click", (event) => {
+                const link = event.target instanceof Element && event.target.closest("a[data-navigo]");
+                if (!link) return;
+
+                const url = new URL(link.getAttribute("href"), window.location.href);
+                if (url.origin !== window.location.origin) return;
+
+                event.preventDefault();
+                window.history.pushState({}, "", url);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                renderRoute();
+            });
+
             // Handle click & route changes
-            window.addEventListener("popstate", renderSelectedComponent);
-            renderSelectedComponent();
+            window.addEventListener("popstate", renderRoute);
+            renderRoute();
         }
 
         // Initialize when DOM is ready
