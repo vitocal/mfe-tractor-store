@@ -1,5 +1,3 @@
-// import register from "preact-custom-element";
-
 const NAMESPACE = 'explore'
 const CE_EXTENSION = '.ce.tsx'
 

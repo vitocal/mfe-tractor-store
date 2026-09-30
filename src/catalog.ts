@@ -4,8 +4,6 @@ import { catalog as explore } from "@vitocal/tractor-explore";
 import decide from "./decide/catalog";
 import checkout from "./checkout/catalog";
 
-console.log(explore);
-
 export const catalog = {
     ...ds,
     ...explore,

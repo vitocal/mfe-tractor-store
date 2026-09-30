@@ -21,7 +21,7 @@ export const Category = ({ category }: { category: String }) => {
   const filters = [
     { url: "/products", name: "All", active: !cat },
     ...data.categories.map((c) => ({
-      url: `/products/${c.key}`,
+      url: `${c.key}`,
       name: c.name,
       active: c.key === category,
     })),

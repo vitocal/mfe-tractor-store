@@ -1,0 +1,240 @@
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Explore Catalog - Dev Viewer</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        main {
+            font-family: Raleway, "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        aside {
+            width: 280px;
+            background: #f4f4f5;
+            border-right: 1px solid #e4e4e7;
+            padding: 1rem;
+            overflow-y: auto;
+
+            & h2 {
+                font-size: 1.1rem;
+                margin-top: 0;
+                color: #27272a;
+            }
+
+            & ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            & li {
+                margin-bottom: 0.5rem;
+            }
+
+            & a {
+                display: block;
+                padding: 0.5rem 0.75rem;
+                color: #3f3f46;
+                text-decoration: none;
+                border-radius: 6px;
+                font-size: 0.9rem;
+
+                &:hover {
+                    background: #e4e4e7;
+                }
+
+                &.active {
+                    background: #2563eb;
+                    color: #ffffff;
+                    font-weight: 500;
+                }
+            }
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            background: #ffffff;
+            overflow-y: auto;
+        }
+    </style>
+    <style>
+        /* web components states */
+        :where(:not(:defined)) {
+            --bg-color: #ccc;
+            --stripes: var(--bg-color);
+
+            --color-bg-dark: #999;
+            --bg: repeating-linear-gradient(45deg, var(--stripes) 0px, var(--stripes) 10px, transparent 10px, transparent 20px);
+
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+
+            overflow: hidden;
+            isolation: isolate;
+            contain: layout;
+
+            background-image: var(--bg);
+            background-position: 0 0;
+
+            min-height: 1lh;
+            min-width: 100%;
+            height: auto;
+            width: 100%;
+
+            padding: 0.35em;
+            border-radius: 0.5rem;
+
+            /* Loading states */
+            &[ce="loading"] {
+                opacity: 0.8;
+                cursor: wait;
+
+                &::after {
+                    pointer-events: none;
+                    content: " ";
+                    position: absolute;
+                    inset: 0;
+
+                    transform: translateX(-100%);
+                    width: 100%;
+
+                    background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
+                    will-change: transform;
+                    animation: shimmer 2.5s ease-in-out infinite;
+                }
+            }
+
+            &[ce="error"] {
+                padding: 0.25em 0.5em;
+                outline: 2px dashed red;
+                outline-offset: -2px;
+
+                --bg-color: transparent;
+                background-color: indianred;
+                color: white;
+
+                &::before {
+                    font-family: monospace;
+                    content: attr(error);
+                }
+
+                /** Disable nested components */
+                &> :not(:defined) {
+                    display: none;
+                }
+            }
+
+            /** This state is an error */
+            &[ce="defined"] {
+                outline: 2px dashed red;
+                --bg-color: transparent;
+                background-color: indianred;
+                color: white;
+
+                &::before {
+                    font-family: monospace;
+                    content: "Error: tag name is probably wrong!";
+                }
+            }
+        }
+
+        [ce="defined"] {
+            opacity: 1;
+        }
+
+        /* Shimmer/skeleton */
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <h2>Explore Components</h2>
+        <ul id="component-list"></ul>
+    </aside>
+
+    <main id="component-stage">
+        <!-- Active custom element renders here -->
+    </main>
+
+    <!-- Vite imports the dev runner -->
+    <script type="module">
+        import CEAutoLoader from "ce-autoloader"
+        import catalog from "/catalog.ts";
+
+        let components = Object.keys(catalog);
+        let registry = new CEAutoLoader({ catalog });
+
+        function init() {
+            initDevCatalogViewer();
+        }
+
+        function initDevCatalogViewer() {
+            const navList = document.getElementById("component-list");
+            const stage = document.getElementById("component-stage");
+
+            if (!navList || !stage) return;
+
+            // Render HTML list items
+            navList.innerHTML = components.map((comp) =>
+                `<li><a href="${comp}" data-tag="${comp}">${comp}</a></li>`
+            ).join("");
+
+            function renderSelectedComponent() {
+                // URL: http://localhost:5173/playground/stores -> slug: "stores"
+                const pathname = window.location.pathname;
+                const slug = pathname.split("/").pop();
+
+                const selected = components.find((c) => c === slug) || components[0];
+                if (!selected) return;
+
+                registry.preload([selected]);
+
+                // Highlight active link
+                navList?.querySelectorAll("a").forEach((link) => {
+                    link.classList.toggle("active", link.getAttribute("data-tag") === selected);
+                });
+
+                // Clear stage and insert the custom element tag dynamically
+                stage.innerHTML = `<${selected}></${selected}>`;
+            }
+
+            // Handle click & route changes
+            window.addEventListener("popstate", renderSelectedComponent);
+            renderSelectedComponent();
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+
+</html>

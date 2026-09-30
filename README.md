@@ -9,7 +9,7 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 
 ## Architecture
 
-- Each team ([checkout](./src/checkout/), [decide](./src/checkout/) and [explore](./src/explore/)) has an isolated repository.
+- Each team ([checkout](./src/checkout/), [decide](./src/checkout/) and [explore](./explore/)) has an isolated repository.
 - Each team can choose their frontend technology stack, as long as they export web-components.
 - Each team can use another team component inside their projects without importing/linking them before-hand.
   - Teams can mock components for local isolated development.
@@ -33,11 +33,21 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 - Inner components may not be `web-components`,they're only consumable by their own team.
 - State is shared between team boundaries via `signals` or other native browser features (`localStorage`)
 
-## Running
+## Preview the whole site
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5147`
+Open `http://localhost:5147` in your browser
+
+## Preview a single team
+
+In your terminal, enter the team folder and run `npm run dev`
+
+Open `http://localhost:4001`, a playground will let you preview the teams components
+
+## Building and publishing
+
+To publish a single team work, run `npm run build` inside the team folder (eg: [explore](./explore/))

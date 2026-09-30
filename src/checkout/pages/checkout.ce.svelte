@@ -15,7 +15,6 @@
 
   const validateForm = () => {
     // Check HTML5 validity of inputs + ensure storeId is present
-    console.log(storeId !== "");
     isFormValid = Boolean(formElement?.checkValidity()) && storeId !== "";
     return isFormValid;
   };
