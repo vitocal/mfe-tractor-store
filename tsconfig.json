@@ -39,8 +39,5 @@
         "src/**/*",
         "global.d.ts",
         "explore"
-    ],
-    "exclude": [
-        "node_modules/"
     ]
 }

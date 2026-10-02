@@ -261,7 +261,7 @@
                 });
 
                 // Preload the page custom-element, then render the route html
-                // registry.preload((result ? tagsIn(result.html) : []).filter((tag) => tag in catalog));
+                registry.preload((result ? tagsIn(result.html) : []).filter((tag) => tag in catalog));
                 stage.innerHTML = result?.html ?? "";
             }
 
