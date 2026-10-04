@@ -29,7 +29,7 @@ export const Category = ({ category }: { category: String }) => {
 
   return (<div data-boundary-page="explore">
     <explore-components-header ></explore-components-header>
-    <main className="e_CategoryPage">
+    <main id="main" className="e_CategoryPage">
       <h2>{title}</h2>
       <div className="e_CategoryPage__subline">
         <p>{products.length} products</p>

@@ -6,6 +6,12 @@
   font-display: swap;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
 :root {
   --outer-space: 1.5rem;
 }
@@ -34,7 +40,6 @@ p {
   --stripes: var(--bg-color);
 
   --color-bg-dark: #999;
-  --bg: repeating-linear-gradient(45deg, var(--stripes) 0px, var(--stripes) 10px, transparent 10px, transparent 20px);
   --bg: none;
 
   display: inline-block;
@@ -58,6 +63,7 @@ p {
   &[ce="loading"] {
     opacity: 0.8;
     cursor: wait;
+    background-color: var(--bg-color);
 
     &::after {
       pointer-events: none;
@@ -69,6 +75,7 @@ p {
       width: 100%;
 
       background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
+      filter: blur(5px);
       will-change: transform;
       animation: shimmer 2.5s ease-in-out infinite;
     }
@@ -123,19 +130,35 @@ vi-router {
     height: 100%;
   }
 
-  & [ce="loading"] {
+  & > [ce="loading"] {
     width: 100%;
     height: 100%;
-    --bg: none;
-    background-color: transparent;
   }
 
-  & [ce="defined"] {
+  & > [ce="defined"] {
     animation: show 1s ease-out;
   }
 
   & main {
     min-height: 100dvh;
+  }
+
+  /**
+ * Reserve space to minimize CLS
+ */
+  explore-components-header {
+    display: block;
+    min-height: 180px;
+    margin: 1rem auto 0;
+  }
+
+  explore-components-recommendations {
+    min-height: 320px;
+  }
+
+  explore-components-footer {
+    display: block;
+    min-height: 300px;
   }
 }
 

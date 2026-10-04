@@ -1,7 +1,7 @@
 <template>
   <div data-boundary-page="decide">
     <explore-components-header></explore-components-header>
-    <main class="d_ProductPage">
+    <main id="main" class="d_ProductPage">
       <div class="d_ProductPage__details" v-if="product?.name">
         <img class="d_ProductPage__productImage" :src="src(variant?.image, 400)"
           :srcset="srcset(variant.image, [400, 800])" sizes="400px" width="400" height="400"

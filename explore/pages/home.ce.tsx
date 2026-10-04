@@ -1,11 +1,12 @@
 import register from "preact-custom-element";
 
+import { useState } from "preact/hooks";
 import { src, srcset, useUpgradedProps } from "../utils";
 
 import data from "../database/index";
+import "../components/recommendations.ce";
 
 import './home.css';
-import { useState } from "preact/hooks";
 
 export const Home = ({ }) => {
     const [skus, _setSkus] = useState(["CL-01-GY", "AU-07-MT"])
@@ -13,7 +14,7 @@ export const Home = ({ }) => {
 
     return <div data-boundary-page="explore">
         <explore-components-header loading="eager" style="min-height: 180px"></explore-components-header>
-        <main className="e_HomePage">
+        <main id="main" className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>
                     <a className="e_HomePage__categoryLink" href={url} key={url} data-navigo>

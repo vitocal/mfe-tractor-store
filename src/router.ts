@@ -1,13 +1,36 @@
+// import type { Catalog } from 'ce-autoloader';
+import CEAutoLoader from 'ce-autoloader';
 import Navigo from 'navigo';
 import type { Match } from 'navigo';
 
+/** Custom elements referenced by the given html */
+function tagsIn(html) {
+    return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
+}
+
 class ViRouter extends HTMLElement {
     public router: Navigo | null = null;
+    public registry: CEAutoLoader
+
     static get observedAttributes(): string[] {
         return ['root'];
     }
+
     connectedCallback() {
         this.router = new Navigo("/", { hash: true });
+        this.registry = (window.registry) || null
+        // console.log(this.registry);
+        // this.router.hooks({
+        //     before(done, match) {
+
+        //         // match is url,queryString, so we dont know which component to preload
+        //         console.log("router: before all (will run viewTransition)", match)
+        //         // if(this.registry){
+        //         //     this.regisry.preload([])
+        //         // }
+        //         done();
+        //     }
+        // })
         this.setupRoutes();
         this.setupLinkInterception();
 
@@ -16,7 +39,6 @@ class ViRouter extends HTMLElement {
 
     disconnectedCallback(): void {
         if (this.router) {
-            debugger;
             this.router.destroy();
             this.router = null;
         }
@@ -114,12 +136,18 @@ class ViRouter extends HTMLElement {
 
     public navigate(path: string): void {
         if (this.router) {
+            performance.mark('navigate')
             this.router.navigate(path);
         }
     }
 
     private render(htmlContent: string): void {
-        this.innerHTML = htmlContent;
+        // Preload the page custom-element, then render the route html
+        const preload_tags = (htmlContent ? tagsIn(htmlContent) : [])
+        this.registry?.preload(preload_tags);
+
+        console.log(`preload_tags`, preload_tags)
+        this.innerHTML = htmlContent ?? "";
     }
 }
 customElements.define('vi-router', ViRouter);

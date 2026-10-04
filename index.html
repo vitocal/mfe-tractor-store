@@ -20,12 +20,16 @@
 
 <script type="module" src="./src/router.ts"></script>
 
+<!-- Don’t consider this page renderable until an element matching #hero is in the DOM. -->
+<link rel="expect" href="#main" blocking="render" />
+
 <script src="/cdn/js/helper.js" defer></script>
 </head>
 
 <body>
   <vi-router class="tractor-app"></vi-router>
   <script type="module" src="./src/app.ts"></script>
+
 </body>
 
 </html>

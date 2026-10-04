@@ -19,7 +19,7 @@ const Stores = () => {
 
     return <div data-boundary-page="explore">
         <explore-components-header></explore-components-header>
-        <main class="e_StoresPage">
+        <main id="main" class="e_StoresPage">
             <h2>Our Stores</h2>
             <p>
                 Want to see our products in person? Visit one of our stores to see
