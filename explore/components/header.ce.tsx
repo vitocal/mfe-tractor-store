@@ -9,7 +9,7 @@ export interface Props { };
 /**
  * Header component.
  */
-const Header = () => {
+export const Header = () => {
   return (
     <header className="e_Header" data-boundary="explore">
       <div className="e_Header__cutter">

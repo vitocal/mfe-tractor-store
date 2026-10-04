@@ -32,12 +32,23 @@ export function fmtprice(price: number) {
   return `${price},00 Ø`;
 }
 
+/** Adopt stylesheet */
+export function adoptStylesheet(root: Node, stylesheet: CSSStyleSheet) {
+  const all_stylesheets = root instanceof ShadowRoot ? root.adoptedStyleSheets : document.adoptedStyleSheets;
+  if (stylesheet && !all_stylesheets.includes(stylesheet)) {
+    all_stylesheets.push(stylesheet);
+  }
+}
+
 /**
  * Useful for passing complex properties like arrays objects to custom elements.
  * Applies complex properties to a Custom Element after it has been upgraded in the browser.
  *
  * @param props An object containing the properties/props to set on the DOM node.
  * @return A Preact/React compatible ref callback function.
+ *
+ * @usage
+ * <my-element ref={lazyProps({my_prop: [1,2,3]})} ></my-element>
  */
 export function lazyProps<T extends HTMLElement = HTMLElement>(
   props: Record<string, unknown>

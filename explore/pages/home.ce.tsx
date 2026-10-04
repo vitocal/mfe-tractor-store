@@ -1,15 +1,18 @@
 import register from "preact-custom-element";
+
 import { src, srcset, useUpgradedProps } from "../utils";
 
 import data from "../database/index";
 
 import './home.css';
+import { useState } from "preact/hooks";
 
 export const Home = ({ }) => {
-    const recsRef = useUpgradedProps({ skus: ["CL-01-GY", "AU-07-MT"] });
+    const [skus, _setSkus] = useState(["CL-01-GY", "AU-07-MT"])
+    const recsRef = useUpgradedProps({ skus });
 
     return <div data-boundary-page="explore">
-        <explore-components-header loading="eager"></explore-components-header>
+        <explore-components-header loading="eager" style="min-height: 180px"></explore-components-header>
         <main className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>

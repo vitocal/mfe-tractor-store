@@ -35,14 +35,13 @@ p {
 
   --color-bg-dark: #999;
   --bg: repeating-linear-gradient(45deg, var(--stripes) 0px, var(--stripes) 10px, transparent 10px, transparent 20px);
+  --bg: none;
 
   display: inline-block;
   vertical-align: middle;
   position: relative;
 
-  overflow: hidden;
-  isolation: isolate;
-  contain: layout;
+  overflow: clip;
 
   background-image: var(--bg);
   background-position: 0 0;
@@ -95,7 +94,7 @@ p {
     }
   }
 
-  /** This state is an error */
+  /** This state SHOUDLNT be possible */
   &[ce="defined"] {
     outline: 2px dashed red;
     --bg-color: transparent;
@@ -104,15 +103,45 @@ p {
 
     &::before {
       font-family: monospace;
-      content: "Error: tag name is probably wrong!";
+      content: "Error: component-name is probably wrong!";
     }
   }
 }
 
-[ce="defined"] {
-  opacity: 1;
+.tractor-app {
+  width: 100dvw;
+  height: 100dvh;
+  display: block;
 }
 
+/**
+ * Reserve space for page components, minimizing Layout shifts
+ */
+vi-router {
+  > *:not(:defined) {
+    width: 100%;
+    height: 100%;
+  }
+
+  & [ce="loading"] {
+    width: 100%;
+    height: 100%;
+    --bg: none;
+    background-color: transparent;
+  }
+
+  & [ce="defined"] {
+    animation: show 1s ease-out;
+  }
+
+  & main {
+    min-height: 100dvh;
+  }
+}
+
+/**
+ * anims
+ */
 /* Shimmer/skeleton */
 @keyframes shimmer {
   0% {
@@ -124,8 +153,11 @@ p {
   }
 }
 
-.tractor-app {
-  width: 100dvw;
-  height: 100dvh;
-  display: block;
+@keyframes show {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

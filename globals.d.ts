@@ -1,1 +1,1 @@
-import './src/explore/types'
+import './explore/types'

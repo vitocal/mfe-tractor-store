@@ -1,5 +1,5 @@
 import register from "preact-custom-element";
-
+import { Component } from "preact";
 import type { RecoItem } from '../types'
 
 import data from "../database/index";
@@ -11,6 +11,32 @@ const r = data.recommendations;
 export interface Props {
   skus?: string[]
 }
+
+/**
+ * Recommendations component.
+ * @param {object} props - The properties of the Recommendations component.
+ * @param {string[]} props.skus - The SKUs of the variants to get recommendations for.
+ * @returns {string} The component markup.
+ */
+export class Recommendations extends Component<Props> {
+  static tagName = 'explore-components-recommendations';
+
+  render({ skus = [] }, state) {
+    console.log("re-run recommendations", skus)
+    const recos = recosForSkus(skus || []);
+
+    return recos.length ? (
+      <div className="e_Recommendations" data-boundary="explore">
+        <h2>Recommendations</h2>
+        <ul className="e_Recommendations_list">{recos.map((r) => <Recommendation {...r} />)}</ul>
+      </div>
+    ) : (
+      <></>
+    );
+  }
+};
+
+export default register(Recommendations, 'explore-components-recommendations', ['skus']);
 
 /**
  * Calculates the average color of an array of colors.
@@ -68,26 +94,3 @@ function recosForSkus(skus: string[], length: number = 4): RecoItem[] {
   distances.sort((a, b) => a.distance - b.distance);
   return distances.slice(0, length).map((d) => r[d.sku]);
 }
-
-
-/**
- * Recommendations component.
- * @param {object} props - The properties of the Recommendations component.
- * @param {string[]} props.skus - The SKUs of the variants to get recommendations for.
- * @returns {string} The component markup.
- */
-export const Recommendations = ({ skus }: Props) => {
-  const recos = recosForSkus(skus || []);
-
-  return recos.length ? (
-    <div className="e_Recommendations" data-boundary="explore">
-      <h2>Recommendations</h2>
-      <ul className="e_Recommendations_list">{recos.map((r) => <Recommendation {...r} />)}</ul>
-    </div>
-  ) : (
-    <></>
-  );
-};
-Recommendations.propTypes = ["skus"]
-
-export default register(Recommendations, 'explore-components-recommendations');

@@ -25,6 +25,10 @@
       </div>
 
       <explore-components-recommendations ref="recsRef"></explore-components-recommendations>
+
+      <json-viewer>
+        {{ JSON.stringify(variant) }}
+      </json-viewer>
     </main>
     <explore-components-footer></explore-components-footer>
   </div>
@@ -61,6 +65,10 @@ const highlights = computed(() => product.value.highlights || []);
 const variant = computed(() => {
   const variants = product.value?.variants || [];
   return variants.find((v) => v.sku === props.sku) || variants[0] || {};
+});
+
+const skus = computed(() => {
+  return variant.value?.sku
 });
 
 // Upgrade explore-recommendations skus
