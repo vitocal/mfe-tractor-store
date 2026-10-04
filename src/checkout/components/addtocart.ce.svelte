@@ -45,7 +45,7 @@
     {/if}
   </div>
 
-  <ds-button disabled={outOfStock} class="c_AddToCart__button" variant="primary" type="submit">
+  <ds-button disabled={outOfStock ? true : undefined} class="c_AddToCart__button" variant="primary" type="submit">
     add to basket
   </ds-button>
 
