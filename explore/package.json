@@ -1,11 +1,11 @@
 {
-  "name": "@vitocal/tractor-explore",
+  "name": "@mfe-tractor/explore",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "sideEffects": true,
   "main": "./dist/catalog.js",
-  "module": "./dist/catalog.js",
+  "module": "./src/catalog.ts",
   "exports": {
     ".": "./dist/catalog.js",
     "./catalog": "./dist/catalog.js",

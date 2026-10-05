@@ -1,5 +1,5 @@
 {
-  "name": "@vitocal/tractor-decide",
+  "name": "@mfe-tractor/decide",
   "private": true,
   "version": "0.0.0",
   "type": "module",

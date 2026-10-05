@@ -1,7 +1,7 @@
 import ds from "./components/catalog";
 
-import { catalog as explore } from "@vitocal/tractor-explore";
-import { catalog as decide } from "@vitocal/tractor-decide";
+import { catalog as explore } from "@mfe-tractor/explore";
+import { catalog as decide } from "@mfe-tractor/decide";
 import checkout from "./checkout/catalog";
 
 const vendors = {

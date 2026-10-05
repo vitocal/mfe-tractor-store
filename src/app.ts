@@ -4,8 +4,8 @@ import catalog from "./catalog";
 import { createRouter } from "./router";
 import type { Router } from "./router";
 
-import explore_routes from "@vitocal/tractor-explore/routes"
-import decide_routes from "@vitocal/tractor-decide/routes";
+import explore_routes from "@mfe-tractor/explore/routes"
+import decide_routes from "@mfe-tractor/decide/routes";
 
 const stage = document.querySelector('vi-router');
 const useHash = true;
