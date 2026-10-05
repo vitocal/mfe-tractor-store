@@ -67,3 +67,27 @@
   margin-top: 3rem;
   padding: 0;
 }
+
+/**
+ * Animations
+ */
+.d_ProductPage {
+  /* & > * {
+    opacity: 0;
+    animation: appear-elegant 300ms ease-out;
+    animation-delay: calc(sibling-index() - 1 * 107ms);
+    animation-fill-mode: forwards;
+  } */
+}
+
+checkout-c-addtocart {
+  min-height: 210px;
+}
+
+decide-c-variant {
+  display: block;
+}
+
+.d_ProductPage__variants {
+  height: 20px;
+}

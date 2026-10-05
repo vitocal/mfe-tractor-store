@@ -28,7 +28,7 @@ export const Category = ({ category }: { category: String }) => {
   ];
 
   return (<div data-boundary-page="explore">
-    <explore-components-header ></explore-components-header>
+    <explore-components-header loading="eager" ></explore-components-header>
     <main id="main" className="e_CategoryPage">
       <h2>{title}</h2>
       <div className="e_CategoryPage__subline">
@@ -36,7 +36,7 @@ export const Category = ({ category }: { category: String }) => {
         <Filter filters={filters} />
       </div>
       <ul className="e_CategoryPage_list">
-        {products.map((p) => <Product {...p} />)}
+        {products.map((p) => <Product className="appear-always appear-elegant appear-staggered" {...p} />)}
       </ul>
     </main>
     <explore-components-footer ></explore-components-footer>

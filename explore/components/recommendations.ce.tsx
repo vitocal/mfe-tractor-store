@@ -22,13 +22,14 @@ export class Recommendations extends Component<Props> {
   static tagName = 'explore-components-recommendations';
 
   render({ skus = [] }, state) {
-    console.log("re-run recommendations", skus)
     const recos = recosForSkus(skus || []);
 
     return recos.length ? (
       <div className="e_Recommendations" data-boundary="explore">
         <h2>Recommendations</h2>
-        <ul className="e_Recommendations_list">{recos.map((r) => <Recommendation {...r} />)}</ul>
+        <ul className="e_Recommendations_list" >
+          {recos.map((r) => <Recommendation className="appear-elegant appear-once appear-staggered" {...r} />)}
+        </ul>
       </div>
     ) : (
       <></>

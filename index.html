@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-appear="true">
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -24,12 +24,13 @@
 <link rel="expect" href="#main" blocking="render" />
 
 <script src="/cdn/js/helper.js" defer></script>
+
+<link rel="preload" href="/cdn/img/logo.svg" as="image" />
 </head>
 
 <body>
+  <script type="module" src="./src/app.ts" async></script>
   <vi-router class="tractor-app"></vi-router>
-  <script type="module" src="./src/app.ts"></script>
-
 </body>
 
 </html>

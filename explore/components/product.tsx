@@ -7,9 +7,9 @@ import "./Product.css";
  * @param {Product} props - The properties of the Product component.
  * @returns {string} The Product component markup.
  */
-export default ({ name, url, image, startPrice }) => {
+export default ({ name, url, image, startPrice, className }) => {
   return (
-    <li className="e_Product" key={url}>
+    <li className={["e_Product", className].join(' ')} key={url} >
       <a className="e_Product_link" href={url} data-navigo>
         <img
           className="e_Product_image"

@@ -1,6 +1,6 @@
 <template>
   <div data-boundary-page="decide">
-    <explore-components-header></explore-components-header>
+    <explore-components-header loading="eager" class="appear-from-top appear-once"></explore-components-header>
     <main id="main" class="d_ProductPage">
       <div class="d_ProductPage__details" v-if="product?.name">
         <img class="d_ProductPage__productImage" :src="src(variant?.image, 400)"
@@ -17,14 +17,15 @@
             <decide-c-variant v-for="v in product.variants" :key="v.sku" v-bind="v" :id="props.id"
               :selected="v.sku === variant.sku"></decide-c-variant>
           </ul>
-          <checkout-c-addtocart :sku="variant.sku"></checkout-c-addtocart>
+          <checkout-c-addtocart :sku="variant.sku" class="appear-elegant"></checkout-c-addtocart>
         </div>
       </div>
       <div class="d_ProductPage__notfound" v-else>
         <h1>Product not found</h1>
       </div>
 
-      <explore-components-recommendations ref="recsRef"></explore-components-recommendations>
+      <explore-components-recommendations ref="recsRef" loading="eager"
+        class="appear-elegant appear-once"></explore-components-recommendations>
 
       <json-viewer>
         {{ JSON.stringify(variant) }}

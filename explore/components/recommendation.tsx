@@ -5,18 +5,16 @@ import type { RecoItem } from '../types'
 
 import "./Recommendation.css";
 
-export interface RecommendationProps {
-  image: string,
-  url: string,
-  name: string
+export interface RecommendationProps extends RecoItem {
+  className?: string
 }
 
 /**
  * Recommendation component.
  */
-export const Recommendation = ({ image, url, name }: RecoItem) => {
+export const Recommendation = ({ image, url, name, className }: RecommendationProps) => {
   return (
-    <li className="e_Recommendation" key={url}>
+    <li className={["e_Recommendation", className].join(' ')} key={url}>
       <a className="e_Recommendation_link" href={url} data-navigo>
         <img
           className="e_Recommendation_image"

@@ -3,5 +3,5 @@
 - [X] Refactor **checkout** catalog load method, use [explore](./src/explore/catalog.ts) as the base.
 - [X] Refactor **decide** catalog load method, use [explore](./src/explore/catalog.ts) as the base.
 - [X] Change pages and components to prefix-p-page and prefx-c-component convention
-
 - [X] Make explore/ team into a isolated build
+

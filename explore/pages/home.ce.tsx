@@ -13,11 +13,11 @@ export const Home = ({ }) => {
     const recsRef = useUpgradedProps({ skus });
 
     return <div data-boundary-page="explore">
-        <explore-components-header loading="eager" style="min-height: 180px"></explore-components-header>
+        <explore-components-header loading="eager" style="min-height: 187px" class="appear-from-top appear-once"></explore-components-header>
         <main id="main" className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>
-                    <a className="e_HomePage__categoryLink" href={url} key={url} data-navigo>
+                    <a className="e_HomePage__categoryLink appear-once appear-elegant appear-staggered" href={url} key={url} data-navigo>
                         <img
                             src={src(image, 500)}
                             srcSet={srcset(image, [500, 1000])}
@@ -28,7 +28,8 @@ export const Home = ({ }) => {
                     </a>,
             )}
             <div className="e_HomePage__recommendations">
-                <explore-components-recommendations ref={recsRef} loading="visible"></explore-components-recommendations>
+                <explore-components-recommendations ref={recsRef} loading="visible"
+                    class="appear-elegant appear-once"></explore-components-recommendations>
             </div>
         </main >
         <explore-components-footer loading="eager"></explore-components-footer>

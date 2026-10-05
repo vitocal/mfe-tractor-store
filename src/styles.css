@@ -15,8 +15,10 @@
 :root {
   --outer-space: 1.5rem;
 }
+
 * {
   box-sizing: border-box;
+  transition-behavior: allow-discrete;
 }
 
 html {
@@ -47,8 +49,10 @@ p {
   position: relative;
 
   overflow: clip;
+  outline: none;
 
   background-image: var(--bg);
+  background-color: transparent;
   background-position: 0 0;
 
   min-height: 1lh;
@@ -61,9 +65,9 @@ p {
 
   /* Loading states */
   &[ce="loading"] {
-    opacity: 0.8;
     cursor: wait;
     background-color: var(--bg-color);
+    transition: background-color 0.1s ease-in-out;
 
     &::after {
       pointer-events: none;
@@ -75,7 +79,6 @@ p {
       width: 100%;
 
       background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
-      filter: blur(5px);
       will-change: transform;
       animation: shimmer 2.5s ease-in-out infinite;
     }
@@ -130,15 +133,6 @@ vi-router {
     height: 100%;
   }
 
-  & > [ce="loading"] {
-    width: 100%;
-    height: 100%;
-  }
-
-  & > [ce="defined"] {
-    animation: show 1s ease-out;
-  }
-
   & main {
     min-height: 100dvh;
   }
@@ -153,6 +147,7 @@ vi-router {
   }
 
   explore-components-recommendations {
+    display: block;
     min-height: 320px;
   }
 
@@ -162,9 +157,83 @@ vi-router {
   }
 }
 
+[ce] {
+}
+
+[ce="loading"] {
+  cursor: wait;
+  background-color: transparent;
+  opacity: 0.25;
+
+  transition: translate, opacity, background-color;
+  transition-duration: 0.5s;
+  transition-timing-function: ease;
+
+  &::after {
+    pointer-events: none;
+    content: " ";
+    position: absolute;
+    inset: 0;
+
+    transform: translateX(-100%);
+    width: 100%;
+
+    background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
+    will-change: transform;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+}
+
+[ce="defined"] {
+  opacity: 1;
+  background-color: transparent;
+
+  transition: translate, opacity, background-color;
+  transition-duration: 0.5s;
+  transition-timing-function: ease;
+}
+
 /**
  * anims
  */
+
+/* Appear animations, only when data-appears is enabled */
+:root[data-appear="true"] {
+  .appear-once {
+    animation: var(--animation-appear-name) 177ms ease-out;
+    animation-fill-mode: both;
+  }
+
+  /* ce-elements should only animate once defined */
+  .appear[ce="loading"] {
+    animation: none;
+  }
+  .appear[ce="defined"] {
+    animation: var(--animation-appear-name) 177ms ease-out;
+    animation-fill-mode: both;
+  }
+
+  /* Maybe needs reaplying */
+  .appear-staggered {
+    animation-delay: calc((sibling-index() - 1) * 133ms);
+  }
+}
+
+.appear-always {
+  animation: var(--animation-appear-name) 177ms ease-out;
+  animation-fill-mode: both;
+}
+
+.appear-elegant {
+  --animation-appear-name: appear-elegant;
+}
+.appear-from-top {
+  --animation-appear-name: appear-from-top;
+}
+.appear-staggered {
+  animation-delay: calc((sibling-index() - 1) * 133ms);
+}
+
 /* Shimmer/skeleton */
 @keyframes shimmer {
   0% {
@@ -182,5 +251,28 @@ vi-router {
   }
   100% {
     opacity: 1;
+  }
+}
+
+@keyframes appear-elegant {
+  0% {
+    opacity: 0;
+    translate: 0 25%;
+  }
+
+  100% {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes appear-from-top {
+  0% {
+    opacity: 0;
+    translate: 0 -25%;
+  }
+
+  100% {
+    opacity: 1;
+    translate: 0 0;
   }
 }
