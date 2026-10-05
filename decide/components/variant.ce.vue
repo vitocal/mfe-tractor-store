@@ -1,7 +1,7 @@
 <template>
   <li class="d_VariantOption" :style="{ '--variant-color': color }">
     <i class="d_VariantOption__color"></i>
-    <a :href="`${pages_product_url}?sku=${sku}`" data-navigo>
+    <a :href="`/product/${id}?sku=${sku}`" data-navigo>
       <strong v-if="isSelected">{{ name }}</strong>
       <span v-else>{{ name }}</span>
     </a>
@@ -40,8 +40,8 @@ const isSelected = computed(() => {
   return typeof props.selected === "string" ? props.selected == "true" : props.selected;
 });
 
-const vi_router = document.querySelector("vi-router");
-const pages_product_url = computed(() => {
-  return vi_router.router.generate("decide-pages-product", { id: props.id });
-});
+// const vi_router = document.querySelector("vi-router");
+// const pages_product_url = computed(() => {
+//   return `/product/${props.id}`
+// });
 </script>

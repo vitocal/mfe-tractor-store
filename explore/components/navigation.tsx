@@ -5,12 +5,12 @@ export default () => {
     <nav className="e_Navigation">
       <ul className="e_Navigation__list">
         <li className="e_Navigation__item">
-          <a href="products" data-navigo>
+          <a href="/products" data-navigo>
             Machines
           </a>
         </li>
         <li className="e_Navigation__item">
-          <a href="stores" data-navigo>
+          <a href="/stores" data-navigo>
             Stores
           </a>
         </li>

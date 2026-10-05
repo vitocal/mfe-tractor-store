@@ -38,6 +38,7 @@
     "include": [
         "src/**/*",
         "global.d.ts",
-        "explore"
+        "explore",
+        "decide",
     ]
 }

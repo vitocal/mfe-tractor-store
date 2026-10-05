@@ -1,5 +1,7 @@
 import { defineConfig } from "vite";
 
+import vue from "@vitejs/plugin-vue";
+
 import preact from "@preact/preset-vite";
 import playgroundFallback from "./playground/server.ts";
 
@@ -37,6 +39,6 @@ export default defineConfig({
     },
   },
   server: {
-    port: 4001
+    port: 4002
   }
 });

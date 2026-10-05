@@ -30,7 +30,7 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 - WebComponents are lazy-loaded, with proper loading animation (skeleton screens)
 - Errors in components are contained:
   - A single bad component wont break the site compilation and runtime.
-- Inner components may not be `web-components`,they're only consumable by their own team.
+- Inner components , since they're only consumable by their own team.
 - State is shared between team boundaries via `signals` or other native browser features (`localStorage`)
 
 ## Preview the whole site
@@ -51,3 +51,8 @@ Open `http://localhost:4001`, a playground will let you preview the teams compon
 ## Building and publishing
 
 To publish a single team work, run `npm run build` inside the team folder (eg: [explore](./explore/))
+
+## WIP
+
+In SPA mode, the routing is done client-side. Browser navigation with hash urls `/#/products/classic`
+

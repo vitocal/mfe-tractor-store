@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "workspaces": [
-    "explore"
+    "explore",
+    "decide"
   ],
   "dependencies": {
     "ce-autoloader": "^0.2.0-rc",

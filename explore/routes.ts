@@ -1,4 +1,4 @@
-import type { Route } from "./router.ts";
+import type { Route } from "../src/router.ts";
 
 /**
  * Explore team route table.

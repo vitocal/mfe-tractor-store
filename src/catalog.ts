@@ -1,12 +1,14 @@
 import ds from "./components/catalog";
 
 import { catalog as explore } from "@vitocal/tractor-explore";
-import decide from "./decide/catalog";
+import { catalog as decide } from "@vitocal/tractor-decide";
 import checkout from "./checkout/catalog";
 
 const vendors = {
     "json-viewer": "https://esm.sh/@alenaksu/json-viewer?standalone"
 }
+
+console.log(decide);
 
 export const catalog = {
     ...ds,

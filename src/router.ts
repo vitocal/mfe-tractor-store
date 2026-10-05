@@ -1,203 +1,151 @@
-// import type { Catalog } from 'ce-autoloader';
-import CEAutoLoader from 'ce-autoloader';
-import Navigo from 'navigo';
-import type { Match } from 'navigo';
+/**
+ * Tiny isomorphic router.
+ *
+ * Runs unchanged in the browser (playground) and in Node (dev server), so it
+ * must stay dependency free and side-effect free: no `window`, no `document`
+ * and no external packages.
+ *
+ * A route is a `name`, a readable `path` (with optional `:params`) and a
+ * `render` callback that receives the matched parameters and returns html.
+ *
+ * @example
+ * const router = createRouter(routes, { notFound });
+ * const { match, html } = router.render("/products/classic");
+ */
 
-/** Custom elements referenced by the given html */
-// function tagsIn(html) {
-//     return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
-// }
+export type RouteParams = Record<string, string>;
 
-
-// function setVisitedCSS() {
-//     // 1. Navigation Timing API check
-//     const navs = performance.getEntriesByType("navigation") || [];
-//     console.log(navs);
-//     const nav = [navs]
-
-//     // transferSize > 0 means fetched from server (not loaded from disk/memory cache)
-//     const fetchedFromNetwork = nav ? nav.transferSize > 0 : true;
-//     console.log(`deliveryType`, nav);
-//     const hasVisited = !!sessionStorage.getItem("hasVisited");
-
-//     // 2. Decide whether to skip animation
-//     if (hasVisited) {
-//         // Subsequent navigation served from cache -> instant render
-//         document.documentElement.dataset.visited = "true";
-//     } else {
-//         // First visit OR hard refresh / cache disabled -> trigger animation
-//         sessionStorage.setItem("hasVisited", "true");
-//         setTimeout(() => {
-//             document.documentElement.dataset.visited = "true";
-//         }, 1000);
-//     }
-// }
-
-class ViRouter extends HTMLElement {
-    public router: Navigo | null = null;
-    public registry: CEAutoLoader
-
-    static get observedAttributes(): string[] {
-        return ['root'];
-    }
-
-    connectedCallback() {
-        this.router = new Navigo("/", { hash: true });
-
-        this.setupRoutes();
-        this.setupLinkInterception();
-        this.registry
-
-        this.router.resolve();
-    }
-
-    disconnectedCallback(): void {
-        if (this.router) {
-            this.router.destroy();
-            this.router = null;
-        }
-    }
-
-    preload(components) {
-        if (window.registry) {
-            performance.mark(`preload:${components[0]}`)
-            console.log(`preload`, components);
-            window.registry.preload(components)
-            return customElements.whenDefined(components[0])
-        } else {
-            console.warn(`cant preload ${components}`)
-            return Promise.resolve();
-        }
-    }
-
-    private setupRoutes(): void {
-        if (!this.router) return;
-
-        // this.router.hooks({
-        //     after(match) {
-        //         setTimeout(() => {
-        //             delete document.documentElement.dataset.appear;
-        //         }, 1000)
-        //     }
-        // })
-        this.router
-            .on({
-                /**
-                 * Team Explore
-                 */
-                '/': {
-                    as: 'home',
-                    uses: async () => {
-                        await this.preload(['explore-pages-home']);
-                        return this.render('<explore-pages-home loading="eager"></explore-pages-home>');
-                    }
-                },
-                '/products': {
-                    as: 'explore-p-products',
-                    uses: async () => {
-                        await this.preload(['explore-pages-category']);
-                        this.render(`<explore-pages-category></explore-pages-category>`);
-                    },
-                },
-                '/products/:id': {
-                    as: 'explore-p-products-bycategory',
-                    uses: async (match: Match) => {
-                        const id = match.data?.id || ''
-                        await this.preload(['explore-pages-category']);
-
-                        this.render(`<explore-pages-category category="${id}"></explore-pages-category>`);
-                    },
-                },
-                '/stores': {
-                    as: 'explore-p-stores',
-                    uses: async () => {
-                        await this.preload(['explore-pages-stores']);
-                        this.render(`<explore-pages-stores loading="eager"></explore-pages-stores>`);
-                    },
-                },
-
-                /**
-                 * Team Decide
-                 */
-                '/product/:id': {
-                    as: 'decide-pages-product',
-                    uses: async (match: Match) => {
-                        const id = match.data?.id
-                        const sku = match.params?.sku || ''
-
-                        await this.preload(['decide-p-product']);
-                        this.render(`<decide-p-product id="${id}" sku="${sku}"></decide-p-product>`);
-                    }
-                },
-
-                /**
-                 * Team checkout
-                 */
-                '/checkout/cart': {
-                    as: 'checkout-pages-cart',
-                    uses: async () => {
-                        await this.preload(['checkout-p-cart']);
-                        this.render('<checkout-p-cart ></checkout-p-cart>')
-                    }
-                },
-                '/checkout/checkout': {
-                    as: 'checkout-pages-checkout',
-                    uses: async () => {
-                        await this.preload(['checkout-p-checkout']);
-                        this.render('<checkout-p-checkout></checkout-p-checkout>')
-                    }
-                },
-                '/checkout/thanks': {
-                    as: 'checkout-pages-thanks',
-                    uses: async () => {
-                        await this.preload(['checkout-p-thanks']);
-                        this.render('<checkout-p-thanks></checkout-p-thanks>')
-                    }
-                }
-            })
-            .notFound(() => {
-                this.render('<h1>404 - Page Not Found</h1>');
-            });
-    }
-
-    private setupLinkInterception(): void {
-        this.addEventListener('click', (event: MouseEvent) => {
-            const target = event.target as HTMLElement | null;
-            const link = target?.closest<HTMLAnchorElement>('[data-navigo]');
-
-            if (link && this.router) {
-                event.preventDefault();
-                const href = link.getAttribute('href');
-                if (href) {
-                    // console.log("link intercepted", this.router.match(href))
-                    this.router.navigate(href);
-
-                    // window.scrollTo({ top: 0, behavior: 'smooth' })
-                }
-            }
-        });
-    }
-
-    public navigate(path: string): void {
-        if (this.router) {
-            performance.mark('navigate')
-            this.router.navigate(path);
-        }
-    }
-
-    private render(htmlContent: string): void {
-        // Preload the page custom-element, then render the route html
-        // const preload_tags = (htmlContent ? tagsIn(htmlContent) : [])
-        // this.registry?.preload(preload_tags);
-        // setVisitedCSS();
-
-        // console.log(`preload_tags`, preload_tags)
-        // performance.mark('preload_tags', { detail: preload_tags })
-        if (document.startViewTransition) {
-            document.startViewTransition(async () => { this.innerHTML = htmlContent ?? "" })
-        } else {
-            requestAnimationFrame(() => { this.innerHTML = htmlContent })
-        }
-    }
+export interface RouteMatch {
+  /** Route name, eg: "products-by-category" */
+  name: string;
+  /** The path pattern that matched, eg: "/products/:category" */
+  path: string;
+  /** The parameters extracted from the url, eg: { category: "classic" } */
+  params: RouteParams;
+  /** Everything after "?", so callbacks can read the query string */
+  query: URLSearchParams;
 }
-customElements.define('vi-router', ViRouter);
+
+export interface Route {
+  name: string;
+  path: string;
+  /** Callback that returns the html for the matched route */
+  render: (params: RouteParams, match: RouteMatch) => string;
+}
+
+export interface Router {
+  routes: Route[];
+  /** Never null when a `notFound` route is registered */
+  match(input: string): RouteMatch | null;
+  render(input: string): { match: RouteMatch; html: string } | null;
+}
+
+export interface RouterOptions {
+  /** Rendered when no route matches, usually the route with path "*" */
+  notFound?: Route;
+}
+
+/** Regex characters that must be escaped to build the path pattern */
+const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
+/** ":param" segments */
+const PARAM = /:([A-Za-z_$][\w$]*)/g;
+
+/**
+ * Strips the query/hash, guarantees a leading slash and drops trailing slashes.
+ * "/products/classic/?sku=1" -> "/products/classic"
+ */
+export function normalizePath(input: string = "/"): string {
+  const [pathname = ""] = String(input).split(/[?#]/);
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return path.length > 1 ? path.replace(/\/+$/, "") : path;
+}
+
+/**
+ * Compiles a readable path into a regex and its parameter names.
+ * "/products/:category" -> { pattern: /^\/products\/([^/]+)\/?$/, keys: ["category"] }
+ * "*" is a catch-all, matching every path.
+ */
+export function compilePath(path: string): { pattern: RegExp; keys: string[] } {
+  const keys: string[] = [];
+
+  if (path.trim() === "*") return { pattern: /^.*$/, keys };
+
+  const source = normalizePath(path)
+    .replace(REGEX_SPECIALS, "\\$&")
+    .replace(PARAM, (_, key: string) => {
+      keys.push(key);
+      return "([^/]+)";
+    });
+
+  return { pattern: new RegExp(`^${source}/?$`), keys };
+}
+
+/** Finds the first route (declaration order) that matches the url/pathname */
+export function matchRoute(routes: Route[], input: string): RouteMatch | null {
+  return findRoute(routes, input)?.match ?? null;
+}
+
+/**
+ * Creates a router for the given route table.
+ *
+ * With a `notFound` route (usually `path: "*"`), `match` and `render` always
+ * resolve something, so unknown paths can be rendered as a 404 page.
+ */
+export function createRouter(routes: Route[], options: RouterOptions = {}): Router {
+  const { notFound } = options;
+
+  const resolve = (input: string) => {
+    const found = findRoute(routes, input);
+    if (found || !notFound) return found;
+
+    return {
+      route: notFound,
+      match: { name: notFound.name, path: notFound.path, params: {}, query: parseQuery(input) },
+    };
+  };
+
+  return {
+    routes,
+    match: (input) => resolve(input)?.match ?? null,
+    render: (input) => {
+      const found = resolve(input);
+      if (!found) return null;
+
+      return { match: found.match, html: found.route.render(found.match.params, found.match) };
+    },
+  };
+}
+
+function findRoute(routes: Route[], input: string): { route: Route; match: RouteMatch } | null {
+  const pathname = normalizePath(input);
+  const query = parseQuery(input);
+
+  for (const route of routes) {
+    const { pattern, keys } = compilePath(route.path);
+    const values = pattern.exec(pathname);
+
+    if (!values) continue;
+
+    const params: RouteParams = {};
+    keys.forEach((key, index) => {
+      params[key] = decodeParam(values[index + 1]);
+    });
+
+    return { route, match: { name: route.name, path: route.path, params, query } };
+  }
+
+  return null;
+}
+
+function parseQuery(input: string): URLSearchParams {
+  const [, search = ""] = String(input).split("#")[0].split("?");
+  return new URLSearchParams(search);
+}
+
+function decodeParam(value: string = ""): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}

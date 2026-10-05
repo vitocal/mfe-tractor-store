@@ -1,6 +1,6 @@
 import type { Plugin } from "vite";
 
-import { createRouter, normalizePath, Route } from "../router.ts";
+import { createRouter, normalizePath, Route } from "../../src/router.ts";
 import routes from "../routes.ts";
 
 /** The playground is the only html entry of the dev server */
@@ -63,7 +63,6 @@ export function playgroundFallback(): Plugin {
     name: "explore:playground-fallback",
     configureServer(server) {
       server.middlewares.use((request, res, next) => {
-        // node typings aren't a dependency of this team, the request is narrowed here
         if (!shouldFallback(request)) return next();
 
         // Rewrite to the playground, the browser url stays untouched

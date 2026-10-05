@@ -14,7 +14,7 @@ export const Header = () => {
     <header className="e_Header" data-boundary="explore">
       <div className="e_Header__cutter">
         <div className="e_Header__inner">
-          <a className="e_Header__link" href="#/">
+          <a className="e_Header__link" href="/">
             <img className="e_Header__logo" src="/cdn/img/logo.svg" alt="Micro Frontends - Tractor Store" />
           </a>
           <div className="e_Header__navigation">

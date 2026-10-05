@@ -1,0 +1,30 @@
+{
+  "name": "@vitocal/tractor-decide",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/catalog.js",
+  "module": "./dist/catalog.js",
+  "exports": {
+    ".": "./dist/catalog.js",
+    "./catalog": "./dist/catalog.js",
+    "./routes": "./dist/routes.js",
+    "./chunks/*": "./dist/chunks/*",
+    "./assets/*": "./dist/assets/*"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "watch": "vite build --watch"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "ce-autoloader": "^0.2.0-rc"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@types/node": "^26.6.3",
+    "vite": "^8.3.1"
+  }
+}

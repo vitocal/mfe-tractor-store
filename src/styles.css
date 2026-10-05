@@ -122,6 +122,7 @@ p {
   width: 100dvw;
   height: 100dvh;
   display: block;
+  overflow: overlay;
 }
 
 /**
