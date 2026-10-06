@@ -51,13 +51,22 @@ const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
 const PARAM = /:([A-Za-z_$][\w$]*)/g;
 
 /**
- * Strips the query/hash, guarantees a leading slash and drops trailing slashes.
+ * Strips the query/hash, guarantees a leading slash, drops trailing slashes and
+ * resolves the directory index.
+ *
  * "/products/classic/?sku=1" -> "/products/classic"
+ * "/products/index.html"     -> "/products"
+ *
+ * The index resolution is what a static server does for a prerendered build: the
+ * "/products/" page is written as "products/index.html", so the same page is reachable
+ * as "/products", "/products/" and "/products/index.html" and all three must match the
+ * "/products" route.
  */
 export function normalizePath(input: string = "/"): string {
   const [pathname = ""] = String(input).split(/[?#]/);
   const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
-  return path.length > 1 ? path.replace(/\/+$/, "") : path;
+  const index = path.replace(/\/index\.html$/, "/");
+  return index.length > 1 ? index.replace(/\/+$/, "") : index;
 }
 
 /**

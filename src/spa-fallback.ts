@@ -1,4 +1,7 @@
-import type { Plugin } from "vite";
+import FS from "node:fs";
+import Path from "node:path";
+
+import type { Plugin, PreviewServer } from "vite";
 
 import { createRouter, normalizePath, Route } from "./router.ts";
 
@@ -42,26 +45,94 @@ export function isAsset(pathname: string): boolean {
   return segment.includes(".");
 }
 
+/** A page request: a browser navigation, never a module, fetch or asset */
+export function isPageRequest(req: FallbackRequest): boolean {
+  if (req.method !== "GET" && req.method !== "HEAD") return false;
+
+  return !isAsset(normalizePath(req.url || "/"));
+}
+
 /**
  * Should this request be served by the shell?
  *
  * Which paths are handled comes from the team route tables.
  */
 export function shouldFallback(req: FallbackRequest): boolean {
-  if (req.method !== "GET" && req.method !== "HEAD") return false;
+  if (!isPageRequest(req)) return false;
   if (!acceptsHtml(req.headers?.accept)) return false;
 
-  const pathname = normalizePath(req.url || "/");
-  if (isAsset(pathname)) return false;
+  return Boolean(router.match(normalizePath(req.url || "/")));
+}
 
-  return Boolean(router.match(pathname));
+/** Does a file exist? */
+function exists(file: string): boolean {
+  try {
+    FS.accessSync(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Is there any prerendered page in the output? (a nested index.html) */
+function hasPrerenderedPages(outDir: string): boolean {
+  try {
+    return FS.readdirSync(outDir, { withFileTypes: true }).some(
+      (entry) => entry.isDirectory() && exists(Path.join(outDir, entry.name, "index.html")),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Preview server.
+ *
+ * `vite preview` serves the built files exactly as they are on disk, which is not enough
+ * here: the pages are written as `products/index.html` while the app links to `/products`,
+ * and routes that were not prerendered (the decide and checkout pages) still have to reach
+ * the shell.
+ *
+ * Resolve both the way a static host would:
+ *
+ *     try_files $uri $uri/index.html /index.html
+ */
+export function configurePreviewServer(server: PreviewServer): void {
+  const outDir = Path.resolve(server.config.root, server.config.build.outDir);
+
+  if (!hasPrerenderedPages(outDir)) {
+    server.config.logger.warn(
+      `\n  no prerendered pages found in ${Path.relative(server.config.root, outDir) || "."} - run \`npm run ssg\` to generate them\n`,
+    );
+  }
+
+  server.middlewares.use((request, _response, next) => {
+    if (!isPageRequest(request)) return next();
+
+    const pathname = normalizePath(request.url || "/");
+
+    // A prerendered page for this url is what a static host serves for the directory, no
+    // matter what the request accepts
+    if (exists(Path.join(outDir, pathname, "index.html"))) {
+      request.url = `${pathname === "/" ? "" : pathname}${INDEX_HTML}`;
+      return next();
+    }
+
+    // Otherwise the shell, so it can route the page client side
+    if (shouldFallback(request)) request.url = INDEX_HTML;
+
+    next();
+  });
 }
 
 /**
  * Spa fallback.
  *
- * Serves the shell html for every html request and leaves the requested url as
- * it is, so the shell can route it client-side against the team routes.
+ * Dev: serves the shell html for every html request and leaves the requested url as it is,
+ * so the shell can route it client-side against the team routes.
+ *
+ * Preview: does the same against the built files, preferring a prerendered page when the
+ * path has one - see {@link configurePreviewServer}.
  */
 export function spaFallback(): Plugin {
   return {
@@ -75,6 +146,7 @@ export function spaFallback(): Plugin {
         next();
       });
     },
+    configurePreviewServer,
   };
 }
 
