@@ -5,7 +5,7 @@ import { useState, useRef } from "preact/hooks";
 import data from "../database/index";
 import { src, srcset } from "../utils";
 
-import "./StorePicker.css";
+import "./storepicker.css";
 
 export function StorePicker() {
   const dialogRef = useRef<HTMLDialogElement>(null);

@@ -3,7 +3,7 @@ import { src, srcset } from "../utils";
 
 import type { RecoItem } from '../types'
 
-import "./Recommendation.css";
+import "./recommendation.css";
 
 export interface RecommendationProps extends RecoItem {
   className?: string

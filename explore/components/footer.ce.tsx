@@ -1,6 +1,6 @@
 import register from "preact-custom-element";
 
-import "./Footer.css";
+import "./footer.css";
 
 export interface Props { };
 

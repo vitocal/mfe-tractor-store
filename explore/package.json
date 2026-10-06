@@ -16,7 +16,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "watch": "vite build --watch"
+    "watch": "vite build --watch",
+    "test": "npm run build && node --import ./test/happy-dom-env.ts --test ./components/*.test.ts ./pages/*.test.ts ./test/*.test.ts"
   },
   "dependencies": {
     "preact": "^11.0.0-rc.2",
@@ -25,6 +26,7 @@
     "react-dom": "npm:@preact/compat"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.14.5",
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.3",
     "ce-autoloader": "^0.2.0-rc",

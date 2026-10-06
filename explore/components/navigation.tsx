@@ -1,4 +1,4 @@
-import "./Navigation.css";
+import "./navigation.css";
 
 export default () => {
   return (

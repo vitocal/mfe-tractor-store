@@ -1,7 +1,7 @@
 import { useRef } from "preact/hooks";
 import { src, srcset, fmtprice } from "../utils";
 
-import "./Product.css";
+import "./product.css";
 
 /**
  * Product component.
