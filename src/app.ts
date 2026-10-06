@@ -8,8 +8,26 @@ import explore_routes from "@mfe-tractor/explore/routes"
 import decide_routes from "@mfe-tractor/decide/routes";
 import checkout_routes from "@mfe-tractor/checkout/routes";
 
-/** The shell stage. Also exposes the navigation API teams call as `vi-router.router.navigate(path)` */
-const stage = document.querySelector('vi-router') as Element & { router?: { navigate: (path: string) => void } };
+/** The shell router, extended with client-side navigation so pages can drive it */
+type ShellRouter = Router & { navigate: (path: string) => void };
+
+/**
+ * The shell stage.
+ *
+ * `vi-router` is a plain, non-catalog custom element: registering it makes the
+ * browser treat it as `:defined`, so the ce-autoloader never tries to resolve it
+ * from a team catalog. It also keeps the stage and the router bound together,
+ * so pages can navigate through `vi-router.router.navigate(path)`.
+ */
+class ViRouter extends HTMLElement {
+    router?: ShellRouter;
+}
+
+if (!customElements.get("vi-router")) {
+    customElements.define("vi-router", ViRouter);
+}
+
+const stage = document.querySelector('vi-router') as ViRouter;
 const useHash = true;
 
 function renderRoute() {
@@ -34,11 +52,16 @@ function init() {
         render: () => `<h1>404 Not Found</h1>`
     };
 
-    window.router = createRouter([...explore_routes, ...decide_routes, ...checkout_routes], { notFound });
-    window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
+    // Bind the stage and the router together, so pages reach the same router
+    // through `vi-router.router` (and the shell through `window.router`).
+    const router: ShellRouter = Object.assign(
+        createRouter([...explore_routes, ...decide_routes, ...checkout_routes], { notFound }),
+        { navigate },
+    );
+    stage.router = router;
+    window.router = router;
 
-    // Pages trigger client-side navigation through the shell stage (eg: checkout pages)
-    stage.router = { navigate };
+    window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
 
     // Intercept app links (data-navigo), navigating client-side like the shell app
     // `data-navigo` may live on a wrapper custom-element (eg: <ds-button href data-navigo>),

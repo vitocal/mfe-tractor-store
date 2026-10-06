@@ -28,9 +28,7 @@ async function vue_ce_import(import_fn) {
 
     let module;
     try {
-        console.log(import_fn)
         module = (await import_fn.apply()).default;
-        console.log(module);
     } catch (e) {
         throw new Error(`Cant import ${import_fn}`);
     }
