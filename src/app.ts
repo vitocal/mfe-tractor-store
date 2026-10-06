@@ -31,7 +31,7 @@ const stage = document.querySelector('vi-router') as ViRouter;
 const useHash = true;
 
 function renderRoute() {
-    // URL: http://localhost:4001/products/classic -> render callback of "products-by-category"
+    // URL: http://localhost:4001/products/:id?search=1
     const result = window.router.render(window.location.pathname + window.location.search);
 
     stage.innerHTML = result?.html ?? "";
@@ -73,8 +73,8 @@ function init() {
         const url = new URL(link.getAttribute("href"), window.location.href);
         if (url.origin !== window.location.origin) return;
 
-        event.preventDefault();
-        navigate(url.pathname + url.search);
+        // event.preventDefault();
+        // navigate(url.pathname + url.search);
     });
     window.addEventListener("popstate", renderRoute);
 

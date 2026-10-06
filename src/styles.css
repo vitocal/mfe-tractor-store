@@ -6,12 +6,6 @@
   font-display: swap;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  @view-transition {
-    navigation: auto;
-  }
-}
-
 :root {
   --outer-space: 1.5rem;
 }
