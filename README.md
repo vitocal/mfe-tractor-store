@@ -219,8 +219,10 @@ navigation actually links to - needs this.
   both. `npm run preview` warns when `dist/` has no prerendered page.
 - The shell build consumes the published team catalogs and routes, so the teams have to be
   built first (`npm run build --workspaces`). `npm run ssg` builds them for you.
-- The components upgrade in place: the loader finds the tags the pass left in the document and
-  defines them, so the markup the pass wrote stays and the live DOM is built inside it.
+- The components upgrade the tags the pass left in the document, so the first paint is the
+  prerendered markup. Preact and Vue replace it as they mount; Svelte mounts by *appending*, so
+  the checkout team's custom elements clear their host first (`adoptPrerenderedMarkup`) - without
+  that, a prerendered page would show the build-time render and then the live one underneath it.
 - A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
   and leaves the stage alone, rather than rendering the same route over the markup. The router
   still ships: a prerendered page links to routes no pass prerenders, and those are rendered in

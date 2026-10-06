@@ -1,6 +1,7 @@
-<svelte:options customElement={{ tag: "checkout-pages-checkout", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-pages-checkout", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
+  import { adoptPrerenderedMarkup } from "../utils";
   import { onMount, tick } from "svelte";
   import { placeOrder } from "../state";
 

@@ -1,6 +1,8 @@
-<svelte:options customElement={{ tag: "checkout-components-compactheader", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-components-compactheader", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
+  import { adoptPrerenderedMarkup } from "../utils";
+
   import "./compactheader.css";
 </script>
 

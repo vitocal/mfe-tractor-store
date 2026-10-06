@@ -161,6 +161,38 @@ crash, invalid html instead of a broken layout. When a render is wrong, isolate 
 smallest html string that reproduces it - the `ceRenderToString` entry point exists for exactly
 that, and it is what found all four of these.
 
+### 6. A prerendered page with state in it showed the state twice
+
+`/checkout/cart` is a per-user page: it renders whatever is in `localStorage`. Prerendering it
+ships a build-time snapshot - an empty basket - which is honest for the first paint and useless
+for a crawler, and it has to be replaced the moment the component mounts.
+
+It wasn't. Measured on the built page, after adding something to the cart:
+
+|                                    | prerendered | live                                |
+| ---------------------------------- | ----------- | ----------------------------------- |
+| `<checkout-pages-cart>` children    | 1           | **2**                               |
+| `.c_CartPage h2`                    | "Basket"    | `["Basket", "Basket"]`              |
+| `.c_CartPage__total`                | `Total: $0 Ø` | `["Total: $0 Ø", "Total: $5100 Ø"]` |
+
+The user reads the *first* ones, so the cart said "No items in cart".
+
+The cause is a difference between the three frameworks that nothing had forced into the open:
+**Svelte mounts a custom element by appending into its host**, while Preact and Vue replace it.
+Explore and decide were fine - one child each, same check - and only checkout, the Svelte team,
+duplicated.
+
+Svelte 5's `customElement` option has an `extend` hook, which runs before the component mounts
+and is the one moment the host can be emptied. `adoptPrerenderedMarkup` clears it (there is no
+shadow root on any of these) and then calls the class's own `connectedCallback`, so the mount
+itself is untouched. It is applied to all seven checkout elements.
+
+**Lesson.** "The component upgrades the prerendered markup" is not a property of SSG, it is a
+property of the *framework* - and a page assembled from three of them has three answers, one of
+which silently appends. The other lesson is where to look: this was invisible in the build (31
+pages, no errors) and invisible in the pass's output (the markup was correct). It only showed up
+by counting nodes in the browser.
+
 ## What we learned
 
 1. **The build manifest is the answer to "which css does this component need".** Not filenames,
@@ -236,6 +268,9 @@ is produced, and everything else follows from that.
 - The css has to be re-established by hand. That is the manifest work above.
 - A second source of truth for the markup, so you need the "already rendered" marker or the
   shell fights the pass.
+- A prerendered page is a snapshot, and a page whose content depends on the visitor (the cart)
+  is snapshotted empty. That is fine for the first paint and for a crawler, but the component
+  has to *replace* it on mount, which each framework does differently.
 - Build-order coupling: teams before the shell, the shell before the pass.
 - Only the routes you enumerate exist. Everything else falls back to the shell and is rendered
   in the browser, so you run both modes at once.

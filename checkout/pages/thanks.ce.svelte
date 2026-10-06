@@ -1,6 +1,7 @@
-<svelte:options customElement={{ tag: "checkout-pages-thanks", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-pages-thanks", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
+  import { adoptPrerenderedMarkup } from "../utils";
   import { onMount } from "svelte";
 
   import "./thanks.css";

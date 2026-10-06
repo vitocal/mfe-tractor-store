@@ -1,6 +1,7 @@
-<svelte:options customElement={{ tag: "checkout-components-addtocart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-components-addtocart", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
+  import { adoptPrerenderedMarkup } from "../utils";
   import data from "../database/index";
   import { addToCart } from "../state";
 

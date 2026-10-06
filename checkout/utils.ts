@@ -70,4 +70,34 @@ export const upgradedProps: Action<HTMLElement, Record<string, unknown>> = (node
       isMounted = false;
     }
   };
+
 };
+
+/** The class Svelte generates for a custom element, as far as adopting the markup cares */
+type SvelteCustomElement = new () => HTMLElement & { connectedCallback?(): void };
+
+/**
+ * A custom element that replaces the markup a prerendered page arrives with.
+ *
+ * Svelte mounts a component by *appending* into its host, so on a prerendered page the
+ * build-time render stays put and the live one lands below it. `/checkout/cart` was showing
+ * "No items in cart" and "Total: $0 Ø" - the basket as it was when the page was built - with
+ * the real one underneath, which reads as an empty cart.
+ *
+ * `extend` runs before Svelte mounts the component, which is the one moment the host can be
+ * emptied. Preact and Vue replace the markup on their own, so this is what makes Svelte match
+ * them, and what keeps a prerendered page from being shown twice.
+ *
+ * Used through `<svelte:options customElement={{ ..., extend: adoptPrerenderedMarkup }} />`.
+ */
+export const adoptPrerenderedMarkup = (CustomElement: SvelteCustomElement) =>
+  class extends CustomElement {
+    connectedCallback() {
+      // Every one of these elements is `shadow: "none"`, so what the page arrived with is the
+      // light DOM. A shadow element would keep its prerendered markup in the shadow root.
+      if (!this.shadowRoot) this.replaceChildren();
+
+      // Svelte's own `connectedCallback` is what mounts the component.
+      super.connectedCallback?.();
+    }
+  };

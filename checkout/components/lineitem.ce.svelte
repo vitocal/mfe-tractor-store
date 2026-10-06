@@ -1,8 +1,8 @@
-<svelte:options customElement={{ tag: "checkout-components-lineitem", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-components-lineitem", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
   import { removeFromCart } from "../state";
-  import { src, srcset } from "../utils";
+  import { adoptPrerenderedMarkup, src, srcset } from "../utils";
 
   import "./lineitem.css";
 

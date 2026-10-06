@@ -1,7 +1,7 @@
-<svelte:options customElement={{ tag: "checkout-pages-cart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-pages-cart", shadow: "none", extend: adoptPrerenderedMarkup }} />
 
 <script>
-  import { upgradedProps } from "../utils";
+  import { adoptPrerenderedMarkup, upgradedProps } from "../utils";
   import data from "../database/index";
   import { cart, removeFromCart } from "../state";
 
