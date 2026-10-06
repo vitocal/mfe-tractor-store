@@ -17,6 +17,7 @@
     "dev": "vite",
     "build": "vite build",
     "watch": "vite build --watch",
+    "test": "npm run build && node --test ./pages/*.test.ts ./test/*.test.ts",
     "ssg": "node ../scripts/ssg.ts --team decide"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "ce-autoloader": "^0.2.0-rc"
   },
   "devDependencies": {
+    "@happy-dom/server-renderer": "^20.14.5",
     "@vitejs/plugin-vue": "^6.0.9",
     "@types/node": "^26.6.3",
     "vite": "^8.3.1"

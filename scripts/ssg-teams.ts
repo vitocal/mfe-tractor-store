@@ -5,6 +5,9 @@
  * extension to recognise its components by. The parameter values are what turn a route
  * *pattern* into the pages to write: `/product/:id` is one page per product, and the products
  * come from the team's own database.
+ *
+ * This is the one list of teams there is: the SSG walks it, and so do the tests - see
+ * `team-render.ts`. A team added here is a team the pass writes pages for and the suite renders.
  */
 
 import FS from "node:fs/promises";
@@ -39,7 +42,7 @@ async function readDatabase(team: string): Promise<TeamDatabase> {
   }
 }
 
-export const TEAMS: Team[] = [
+export const TEAMS = [
   {
     name: "explore",
     extension: ".ce.tsx",
@@ -66,4 +69,4 @@ export const TEAMS: Team[] = [
       return {};
     },
   },
-];
+] as const satisfies readonly Team[];

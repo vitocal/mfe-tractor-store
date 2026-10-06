@@ -327,6 +327,49 @@ convention), and warns when a component's build declares no stylesheet at all. A
 every namespace - `<vi-router>`, a third party element - is somebody else's business and is
 left alone.
 
+## Testing
+
+Every team has its own runner, and they are run from the team folder:
+
+```
+cd checkout && npm test
+```
+
+The script builds the team, then renders **every page it publishes** through
+[`ceRenderToString`](./scripts/ce-render.ts) - the very function the SSG renders with, over the
+same built catalog and build manifest. That is the assertion worth making: a page that renders
+here is a page that renders at build time. The pages come from the *built catalog* rather than a
+list, so a page added to `pages/` is covered the moment it is built, and one that stops
+rendering fails here, naming itself, instead of at build time.
+
+That contract lives in one place, [`scripts/team-render.ts`](./scripts/team-render.ts): a team's
+[`test/render.ts`](./checkout/test/render.ts) is one line binding the *preset* for its build, and
+its [`test/pages.test.ts`](./checkout/test/pages.test.ts) hands that preset to `describePages`.
+Every team's pages are held to the same two properties, so a page that renders once for checkout
+renders once for decide, and the tests that prove it cannot drift apart. The teams come from the
+SSG's own table ([`scripts/ssg-teams.ts`](./scripts/ssg-teams.ts)), which is why a team added
+there is a team the pass writes pages for *and* a team the suite renders.
+
+The second property is that a page renders **once**, even when it arrives with the markup a
+prerendered page carries. Svelte mounts by *appending*, so without `adoptPrerenderedMarkup` a
+prerendered checkout page showed the build-time render with the live one underneath - Preact and
+Vue replace on their own. Take the `extend` off a checkout element and that test fails, which is
+the whole point of it.
+
+The page tests sit next to the pages they test, the way
+[explore's](./explore/pages/home.ce.test.ts) do. There is no `happy-dom-env.ts` to import:
+`ceRenderToString` runs a Happy DOM ServerRenderer, which brings its own window, so a global one
+would only shadow it. [Explore's](./explore/test/happy-dom-env.ts) is for the component tests
+that mount by hand.
+
+| team                    | run it with               | covers                                                          |
+| ----------------------- | ------------------------- | --------------------------------------------------------------- |
+| [explore](./explore/)   | `cd explore && npm test`  | its components mounted, its pages rendered, the shell's modules |
+| [checkout](./checkout/) | `cd checkout && npm test` | its pages, rendered through the SSG's own renderer              |
+| [decide](./decide/)     | `cd decide && npm test`   | its pages, rendered through the SSG's own renderer              |
+
+`npm test` at the root runs all three.
+
 ## Preview a single team
 
 In your terminal, enter the team folder and run `npm run dev`.

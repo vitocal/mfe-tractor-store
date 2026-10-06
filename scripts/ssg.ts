@@ -164,7 +164,7 @@ async function readStyleIndex(): Promise<Map<string, string[]>> {
  * else under the shell's javascript - the shell's own runtime above all - is served empty, so
  * it can not boot the router and re-render the stage being expanded.
  */
-function codeUrls(teams: Team[]): string[] {
+function codeUrls(teams: readonly Team[]): string[] {
   return teams.flatMap((team) => [
     `/${team.name}/dist/chunks/`,
     `/${team.name}/dist/catalog.js`,
@@ -175,7 +175,7 @@ function codeUrls(teams: Team[]): string[] {
  * The catalogs the render loads components through: a team publishes its catalog as its main
  * entry, and `catalog.ts` is what turns a team's modules into custom elements.
  */
-function catalogUrls(teams: Team[]): string[] {
+function catalogUrls(teams: readonly Team[]): string[] {
   return teams.map((team) => `/${team.name}/dist/catalog.js`);
 }
 

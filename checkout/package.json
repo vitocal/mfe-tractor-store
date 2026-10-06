@@ -17,6 +17,7 @@
     "dev": "vite",
     "build": "vite build",
     "watch": "vite build --watch",
+    "test": "npm run build && node --test ./pages/*.test.ts ./test/*.test.ts",
     "ssg": "node ../scripts/ssg.ts --team checkout"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "svelte": "^5.57.1"
   },
   "devDependencies": {
+    "@happy-dom/server-renderer": "^20.14.5",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^26.6.3",
     "vite": "^8.3.1"

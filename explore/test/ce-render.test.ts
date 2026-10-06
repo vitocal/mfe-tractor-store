@@ -1,35 +1,13 @@
 import assert from "node:assert/strict";
-import FS from "node:fs";
-import Path from "node:path";
 import { describe, it } from "node:test";
-import { fileURLToPath } from "node:url";
 
-import catalog from "../dist/catalog.js";
 import { ceRenderToString, splitMixedImports, stylesFor } from "../../scripts/ce-render.ts";
 import type { Catalog } from "../../scripts/ce-render.ts";
 import type { Manifest } from "../../scripts/component-styles.ts";
 
-/** The team's own build, which the test script runs first */
-const TEAM_DIR = Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "..");
-const ROOT_DIR = Path.dirname(TEAM_DIR);
-
-/** What the build emitted, and the stylesheet each module was compiled into */
-const manifest = JSON.parse(
-  FS.readFileSync(Path.join(TEAM_DIR, "dist", ".vite", "manifest.json"), "utf8"),
-) as Manifest;
-
-/** The url the built catalog is served under, and the root that url resolves inside */
-const CATALOG_URL = "/explore/dist/catalog.js";
-const ROOTS = [ROOT_DIR];
-
-/** Renders a fragment the way a server would, with a timeout short enough to fail a test fast */
-function render(html: string): Promise<string> {
-  return ceRenderToString(html, manifest, catalog, {
-    catalogUrl: CATALOG_URL,
-    roots: ROOTS,
-    timeout: 10000,
-  });
-}
+// Explore's preset: the built catalog, the build manifest, and a renderer that uses both, the same
+// way `./render.ts` binds them for the page suite.
+import { catalog, manifest, render } from "./render.ts";
 
 /** A build with the interesting shapes in it: components, and modules that are not */
 const demoManifest: Manifest = {

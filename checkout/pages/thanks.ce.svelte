@@ -36,7 +36,12 @@
         }
       }
       frame();
-    });
+    })
+    // The module comes from a CDN, and this page can be rendered without one: a build, a browser
+    // that is offline, or a request an extension blocked. The import then resolves without a
+    // usable default and `frame()` throws. Confetti is a flourish - the page is complete without
+    // it - so this catches it rather than letting it surface as an unhandled rejection.
+    .catch(() => {});
   });
 </script>
 
