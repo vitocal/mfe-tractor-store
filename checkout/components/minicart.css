@@ -5,6 +5,11 @@
 
 .c_MiniCart__wrapper {
   position: relative;
+  width: 66px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .c_MiniCart__quantity {
