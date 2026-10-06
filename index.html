@@ -11,7 +11,24 @@
   <link rel="stylesheet"> is not guaranteed to be loaded by then (the transition is then skipped with
   "ViewTransition opt-in disabled"). An inline <style> is parsed synchronously, so declare it here.
 -->
-<style>@view-transition { navigation: auto; }</style>
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+</style>
+
+<!-- [VT-TEST] temporary -->
+<script>
+  addEventListener("pagereveal", (e) => {
+    const vt = e.viewTransition;
+    console.log("[VT-test] pagereveal vt=", !!vt, "t=", Math.round(performance.now()));
+    if (!vt) return;
+    const t0 = performance.now();
+    vt.ready.then(() => console.log("[VT-test] ready +", Math.round(performance.now() - t0)));
+    vt.finished.then(() => console.log("[VT-test] finished +", Math.round(performance.now() - t0)));
+    vt.waitUntil(new Promise((r) => setTimeout(r, 2000)));
+  });
+</script>
 
 <link rel="apple-touch-icon" sizes="180x180" href="/cdn/img/meta/apple-touch-icon.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/cdn/img/meta/favicon-32x32.png" />
@@ -26,8 +43,7 @@
 
 <link rel="stylesheet" href="./src/styles.css" />
 
-<!-- Don’t consider this page renderable until an element matching #main is in the DOM. -->
-<link rel="expect" href="#main" blocking="render" />
+
 
 <script src="/cdn/js/helper.js" defer></script>
 

@@ -39,6 +39,9 @@
   grid-area: image;
   width: 100%;
   height: auto;
+
+  /* Shared element for cross-document view transitions */
+  view-transition-name: product-image;
 }
 
 .d_ProductPage__productInformation {
@@ -48,6 +51,9 @@
 .d_ProductPage__title {
   margin: 0;
   font-size: 40px;
+
+  /* Shared element for cross-document view transitions */
+  view-transition-name: product-title;
 }
 
 .d_ProductPage__highlights {
@@ -71,14 +77,6 @@
 /**
  * Animations
  */
-.d_ProductPage {
-  /* & > * {
-    opacity: 0;
-    animation: appear-elegant 300ms ease-out;
-    animation-delay: calc(sibling-index() - 1 * 107ms);
-    animation-fill-mode: forwards;
-  } */
-}
 
 checkout-c-addtocart {
   min-height: 210px;

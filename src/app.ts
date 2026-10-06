@@ -8,8 +8,18 @@ import explore_routes from "@mfe-tractor/explore/routes"
 import decide_routes from "@mfe-tractor/decide/routes";
 import checkout_routes from "@mfe-tractor/checkout/routes";
 
+console.log("[shell] module loaded", location.pathname);
+
 /** The shell router, extended with client-side navigation so pages can drive it */
 type ShellRouter = Router & { navigate: (path: string) => void };
+
+/** The (still experimental) bits of the View Transitions API the shell uses */
+type NavigationViewTransition = { waitUntil(promise: Promise<unknown>): void };
+
+/** Custom element tags referenced by the given html */
+function tagsIn(html: string): string[] {
+    return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
+}
 
 /**
  * The shell stage.
@@ -62,6 +72,18 @@ function init() {
     window.router = router;
 
     window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
+
+    // Cross-document view transitions: before the incoming page is snapshotted, wait for the
+    // route's custom elements to upgrade, so the transition lands on real content, not skeletons.
+    window.addEventListener("pagereveal", (event) => {
+        const transition = (event as Event & { viewTransition?: NavigationViewTransition }).viewTransition;
+        const tags = tagsIn(stage.innerHTML).filter((tag) => tag in catalog && !customElements.get(tag));
+        console.log("[pagereveal] vt=", !!transition, "tags=", tags, "registry=", !!window.registry);
+        if (!transition || !window.registry) return;
+        if (!tags.length) return;
+
+        transition.waitUntil(window.registry.preload(tags).catch(() => { }));
+    });
 
     // Intercept app links (data-navigo), navigating client-side like the shell app
     // `data-navigo` may live on a wrapper custom-element (eg: <ds-button href data-navigo>),
