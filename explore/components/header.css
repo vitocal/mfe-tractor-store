@@ -125,6 +125,12 @@
   aspect-ratio: 1;
 }
 
+/* Reserve the mini-cart box while it loads, so it doesn't shift once upgraded */
+.e_Header__cart > checkout-components-minicart {
+  width: 100%;
+  height: 100%;
+}
+
 .e_Header__navigation {
   @media (max-width: 999px) {
     margin-bottom: 1rem;

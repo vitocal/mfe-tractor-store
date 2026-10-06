@@ -78,14 +78,28 @@
  * Animations
  */
 
-checkout-c-addtocart {
-  min-height: 210px;
+/**
+ * Reserve space for the async components so the first render doesn't shift.
+ *
+ * The add-to-cart box is 210px tall, plus the 1rem bottom margin of its inner
+ * form, so the whole footprint is 226px. `flow-root` keeps that inner margin
+ * inside the host, so the reserved box matches the final one exactly.
+ */
+checkout-components-addtocart {
+  display: flow-root;
+  min-height: 226px;
 }
 
-decide-c-variant {
+/*
+ * Reserving their width makes them wrap into the same rows as the final ones,
+ * so the variants row keeps a stable height (1 row or 2 rows)
+ * instead of collapsing to a single skinny row first.
+ */
+decide-components-variant:not(:defined) {
   display: block;
+  min-width: 140px;
 }
 
 .d_ProductPage__variants {
-  height: 20px;
+  min-height: 20px;
 }
