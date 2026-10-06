@@ -213,12 +213,12 @@ function showToggleButton() {
 setBasicStyles();
 showToggleButton();
 
-const [navEntry] = performance.getEntriesByType("navigation");
-if (navEntry?.type === "reload") {
-  localStorage.clear();
-  sessionStorage.clear();
-  console.log("Cleared storage on full browser reload!");
-}
+// const [navEntry] = performance.getEntriesByType("navigation");
+// if (navEntry?.type === "reload") {
+//   localStorage.clear();
+//   sessionStorage.clear();
+//   console.log("Cleared storage on full browser reload!");
+// }
 
 window.addEventListener("load", () => {
   setTimeout(() => {

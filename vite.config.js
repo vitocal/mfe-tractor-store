@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
-import spaFallback from "./src/spa-fallback.ts";
-import stageTeamAssets from "./src/stage-team-assets.ts";
+import spaFallback from "./scripts/spa-fallback.ts";
+import stageTeamAssets from "./scripts/stage-team-assets.ts";
 
 export default defineConfig({
   appType: "mpa",

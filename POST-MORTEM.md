@@ -114,6 +114,53 @@ and the shell skips the render when the path matches. Measured:
 from "not done yet". And the router has to stay: a prerendered page links to routes no pass
 prerenders, so it is the fallback, not dead weight.
 
+### 5. Only one team was prerendered - and extending it broke every page
+
+The pass covered explore alone. Extending it to decide and checkout should have been config:
+each team already had a route table and a catalog. Instead every page timed out, or rendered as
+a bare placeholder. Four separate causes, all of them invisible in a browser:
+
+**a. A team's catalog is where its components are *defined*.** The pass imported the built
+`chunks/*.ce.js` directly. That works for Preact and Svelte, whose components call `register()`
+when their module is imported. Vue does not: the catalog is what calls
+`defineCustomElement(module.default)` and produces the constructor. So decide's chunks imported
+cleanly and defined nothing, and `<decide-pages-product>` stayed a placeholder with its own
+route markup inside it - a 1.9 kB page where the others were 8-14 kB. The fix was to stop
+importing chunks and load through the catalogs instead, which is what the browser's loader does
+anyway.
+
+**b. A module happy-dom cannot compile does not fail - it hangs.** The built catalog contains
+`import.meta.resolve ? import.meta.resolve(e) : new URL(e, import.meta.url).href`. happy-dom's
+module compiler cannot handle it, and a module that never finishes compiling never rejects
+either: the render waits for an import that will never resolve, and every page spends its full
+30 second timeout. This is the single most expensive failure mode in the whole exercise - it
+looks like slowness, not breakage, and it reports nothing.
+
+**c. The preload helper is actively hostile to a render.** Every catalog loader is wrapped in
+`preload(() => import(chunk), deps, url)`, which fetches the component's stylesheet and *waits
+for it* before importing the module. In a render the stylesheets are linked from the manifest,
+so that `<link>` is never going to load - and the loader sits on it while the page is
+serialized, so the components define *after* the html is written.
+
+Both b and c are fixed the same way: the interceptor rewrites the module it serves, the way it
+already did for the mixed default/named import. `import.meta.resolve` is replaced with the
+fallback it guards (identical resolution), and `()=>n(()=>import("…"),deps,url)` becomes
+`()=>import("…")`. Only the render sees the rewritten source.
+
+**d. The decide route emitted invalid html.** Its render returned
+`<decide-pages-product id=${id} sku=${sku}></decide-pages-product id=${id} sku=${sku}>` - an
+unquoted attribute that renders the string `"undefined"` when there is no sku, and an end tag
+carrying attributes, which the parser treats as *text*. In a browser this is invisible: the
+component replaces its own children when it renders. In a render it is the difference between
+an element and an element with a stray text node, and it is what the pass had been quietly
+serving.
+
+**Lesson.** A build-time renderer turns every implicit runtime behaviour into an explicit
+dependency, and it fails *quietly*: a hang instead of an error, a placeholder instead of a
+crash, invalid html instead of a broken layout. When a render is wrong, isolate it down to the
+smallest html string that reproduces it - the `ceRenderToString` entry point exists for exactly
+that, and it is what found all four of these.
+
 ## What we learned
 
 1. **The build manifest is the answer to "which css does this component need".** Not filenames,
@@ -132,8 +179,9 @@ prerenders, so it is the fallback, not dead weight.
    its config into a worker, so the fetch interceptor (a function) forced
    `worker: { disable: true }`. Anything passed through a worker boundary has to be data.
 5. **Headless DOMs need their environment faked, deliberately.** `loading="visible"` can never
-   fire without layout, so those components never upgrade in a render. Stylesheets have to be
-   answered from memory (`disableCSSFileLoading: true` hangs). `document.write` order matters.
+   fire without layout, so those components never upgrade in a render. Stylesheet *loading* has
+   to be off (a render links its own), but switching it off alone makes every preload hang, so
+   `handleDisabledFileLoadingAsSuccess` has to come with it. `document.write` order matters.
    Every one of these is a place where the render diverges from the browser.
 6. **Verify with the real build artifacts, not fixtures.** The test that matters most here is
    the drift test: every tag the *built* explore catalog registers must resolve from the *real*
@@ -191,8 +239,11 @@ is produced, and everything else follows from that.
 - Build-order coupling: teams before the shell, the shell before the pass.
 - Only the routes you enumerate exist. Everything else falls back to the shell and is rendered
   in the browser, so you run both modes at once.
-- Cross-team components cannot be expanded by a team's own pass (explore's pass cannot render
-  the checkout team's mini-cart), which leaves those placeholders to the browser.
+- Components the render can not load stay placeholders. The shell's design system is the one
+  left: its chunks import the shell entry, which the render must not boot, so `<ds-button>`
+  waits for the browser.
+- The render needs its own module rewrites (below). Every one of them is a happy-dom
+  limitation, but they are still render-only behaviour that has to be maintained.
 
 ### Where the trade-offs landed here
 
@@ -201,11 +252,16 @@ order.** For a store whose every page is assembled from lazy components, that is
 the page is now correct before a byte of javascript runs, and the javascript budget did not
 change.
 
-The two modes are not exclusive, and this repo ends up using both - explore is prerendered,
-decide and checkout are rendered in the browser. That is not a wart to be engineered away, it
-is what adopting SSG incrementally looks like. The one rule that makes it coherent is the
-`data-prerendered` marker: whichever mode produced the document, the shell can tell whether the
-markup is already there.
+The two modes are not exclusive, and this repo ends up using both: the prerendered routes are
+served as files, and every other route is rendered in the browser. That is not a wart to be
+engineered away, it is what adopting SSG incrementally looks like. The one rule that makes it
+coherent is the `data-prerendered` marker: whichever mode produced the document, the shell can
+tell whether the markup is already there.
+
+All three teams are prerendered now - 31 pages across explore, decide and checkout. A page uses
+components from more than one team (a checkout page uses explore's header, a decide page uses
+checkout's add to cart), and that is not a problem to solve but a consequence of loading every
+team's catalog: the stylesheet index narrows the result back down per page.
 
 ## Measuring this yourself
 
@@ -216,6 +272,9 @@ npm run preview:ssg
 To see the first paint as the browser sees it, park the shell's javascript
 (`mv dist/index.js /tmp/`) and read computed styles at `DOMContentLoaded` - that is pure html
 and css, which is what render-blocking stylesheets actually guarantee. To watch the pass work,
-`SSG_DEBUG=1 npm run ssg` logs every asset the render asks for.
+`CE_RENDER_TRACE=1 npm run ssg` logs every asset the render asks for, and `SSG_TRACE=1` traces
+what it is waiting for. To isolate one component,
+[`ceRenderToString`](./scripts/ce-render.ts) renders a single html string through the same
+machinery the pass uses.
 
 Open gaps are listed in [README.md](./README.md#known-gaps).

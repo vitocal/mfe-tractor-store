@@ -9,9 +9,9 @@
  *
  * So the prerender has to know the styles up front. The authoritative source is the build
  * manifest Vite writes next to a build (`manifest: true`): it maps every module it emitted
- * to the stylesheet that module was compiled into. A module becomes a tag exactly the way
- * the team's own `catalog.ts` names it - `pages/category.ce.tsx` in the `explore` build is
- * `<explore-pages-category>`.
+ * to the stylesheet that module was compiled into. Each build names its tags its own way -
+ * a team through `catalog.ts`, the shell's design system through `components/catalog.ts` -
+ * so a build says how, and this module does the rest.
  */
 
 /** A Vite build manifest: the modules a build emitted, and the stylesheets they need */
@@ -19,24 +19,46 @@ export type Manifest = Record<string, { file: string; css?: string[] }>;
 
 /** A build that names custom elements, and the manifest of what it emitted */
 export interface ComponentBuild {
-    /** The tag prefix, eg `explore` in `<explore-pages-home>` */
-    prefix: string;
-    /** The custom element extension the build uses, eg `.ce.tsx` */
-    extension: string;
+    /** The tag a module compiles into, or null when the module is not a component */
+    tagFor(module: string): string | null;
     /** What the build emitted, keyed by module path */
     manifest: Manifest;
 }
 
-/** The custom element tags the given html uses, in order of first appearance */
-export function tagsIn(html: string): string[] {
-    return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
+/**
+ * A team build.
+ *
+ * `catalog.ts` turns `pages/category.ce.tsx` into `<explore-pages-category>`: prefix the
+ * namespace, drop the custom element extension, join the path with dashes.
+ */
+export function teamBuild(prefix: string, extension: string, manifest: Manifest): ComponentBuild {
+    return {
+        manifest,
+        tagFor(module) {
+            if (!module.endsWith(extension)) return null;
+
+            const [type, filename = ""] = module.split("/");
+
+            return `${prefix}-${type}-${filename}`.replace(extension, "");
+        },
+    };
 }
 
-/** The tag a module is built into, the way `catalog.ts` derives it */
-export function tagForModule({ prefix, extension }: ComponentBuild, module: string): string {
-    const [type, filename = ""] = module.split("/");
+/**
+ * The shell's design system.
+ *
+ * `components/catalog.ts` resolves `ds-*` to `./<name>.tsx`, so `<ds-button>` is
+ * `src/components/button.tsx`.
+ */
+export function designSystemBuild(manifest: Manifest): ComponentBuild {
+    return {
+        manifest,
+        tagFor(module) {
+            const component = /^src\/components\/([^/]+)\.tsx$/.exec(module);
 
-    return `${prefix}-${type}-${filename}`.replace(extension, "");
+            return component ? `ds-${component[1]}` : null;
+        },
+    };
 }
 
 /** `assets/index.css` -> `/assets/index.css`, so the url resolves from any page depth */
@@ -50,11 +72,11 @@ export function stylesByTag(builds: ComponentBuild[]): Map<string, string[]> {
 
     for (const build of builds) {
         for (const [module, output] of Object.entries(build.manifest)) {
-            // A manifest also lists plain modules - `routes.ts`, the shared chunks. Only the
-            // components the team's `catalog.ts` globs can become a tag.
-            if (!module.endsWith(build.extension)) continue;
+            // A manifest also lists plain modules - `routes.ts`, the shared chunks. A build's
+            // `tagFor` answers null for those: only what its catalog globs can become a tag.
+            const tag = build.tagFor(module);
 
-            index.set(tagForModule(build, module), (output.css ?? []).map(toUrl));
+            if (tag) index.set(tag, (output.css ?? []).map(toUrl));
         }
     }
 

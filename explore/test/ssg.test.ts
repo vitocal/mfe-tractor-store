@@ -2,13 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { Route } from "../../src/router.ts";
+import { TEAMS } from "../../scripts/ssg-teams.ts";
+import { fillStage, outputFileFor, pathsFor, withExplicitHead } from "../../scripts/ssg.ts";
+
 import routes from "../dist/routes.js";
-import { fillStage, outputFileFor, pathsFor, withExplicitHead } from "../ssg.ts";
 
 /** A throwaway route, only its path matters here */
 function route(path: string): Route {
   return { name: "test", path, render: () => "" };
 }
+
+/** The categories the explore database holds, which is what the pass enumerates a param with */
+const CATEGORIES = { category: ["classic", "autonomous"] };
 
 describe("ssg", () => {
   describe("pathsFor", () => {
@@ -17,20 +22,31 @@ describe("ssg", () => {
     });
 
     it("expands a param into one path per known value", () => {
-      assert.deepEqual(pathsFor(route("/products/:category")), [
+      assert.deepEqual(pathsFor(route("/products/:category"), CATEGORIES), [
         "/products/classic",
         "/products/autonomous",
       ]);
     });
 
-    it("turns the explore route table into one path per page", () => {
-      assert.deepEqual((routes as Route[]).flatMap(pathsFor), [
+    it("drops a pattern whose param has no known values", () => {
+      assert.deepEqual(pathsFor(route("/products/:category")), []);
+    });
+
+    it("turns the explore route table into one path per page", async () => {
+      const explore = TEAMS.find(({ name }) => name === "explore");
+
+      assert.ok(explore, "explore is one of the teams the pass covers");
+
+      const paths = (routes as Route[]).flatMap((route) => pathsFor(route, CATEGORIES));
+
+      assert.deepEqual(paths, [
         "/",
         "/products",
         "/products/classic",
         "/products/autonomous",
         "/stores",
       ]);
+      assert.deepEqual(await explore.params(), CATEGORIES);
     });
   });
 

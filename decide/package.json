@@ -16,7 +16,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "watch": "vite build --watch"
+    "watch": "vite build --watch",
+    "ssg": "node ../scripts/ssg.ts --team decide"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.9",

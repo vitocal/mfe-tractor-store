@@ -3,7 +3,7 @@ import Path from "node:path";
 
 import type { Plugin, PreviewServer } from "vite";
 
-import { createRouter, normalizePath, Route } from "./router.ts";
+import { createRouter, normalizePath, Route } from "../src/router.ts";
 
 import explore_routes from "@mfe-tractor/explore/routes";
 import decide_routes from "@mfe-tractor/decide/routes";

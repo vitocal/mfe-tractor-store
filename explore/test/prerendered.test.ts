@@ -5,7 +5,7 @@ import {
   markPrerendered,
   prerenderedRoute,
   PRERENDERED_ATTRIBUTE,
-} from "../../src/prerendered.ts";
+} from "../../scripts/prerendered.ts";
 
 describe("prerendered marker", () => {
   /** The shell as the build writes it: no head element, no marker */

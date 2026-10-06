@@ -115,7 +115,7 @@ sequenceDiagram
 
 ### SSG mode
 
-[`explore/ssg.ts`](./explore/ssg.ts) walks the same route tables, and for every concrete
+[`scripts/ssg.ts`](./scripts/ssg.ts) walks the same route tables, and for every concrete
 route renders the page into the built shell html and writes the result to disk:
 
 ```
@@ -133,7 +133,7 @@ templates, so the files can not drift from the app.
 sequenceDiagram
   autonumber
   participant C as npm run ssg
-  participant G as explore/ssg.ts
+  participant G as scripts/ssg.ts
   participant P as Happy DOM page
   participant I as fetch interceptor
   participant K as Built chunks
@@ -146,12 +146,12 @@ sequenceDiagram
 
   loop every page
     G->>P: new page, url is the route url
-    G->>P: evaluate setupScript, importing every chunks/*.ce.js
-    P->>K: imports the built chunks
+    G->>P: evaluate setupScript, importing every team catalog
+    P->>K: imports the built chunks the catalog points at
     K->>P: register, so the tags are defined
     G->>P: document.write of the shell with the stage filled
     P->>I: asset requests
-    Note over I: css and the shell runtime are answered empty
+    Note over I: the shell runtime is answered empty
     I-->>P: team chunks straight from disk
     Note over P: the tags are defined, so they upgrade on insert
     P->>P: waitUntilComplete
@@ -165,13 +165,15 @@ npm run ssg
 ```
 
 ```
-[ssg] explore: rendering 4 routes
-[ssg] + /stores -> dist/stores/index.html (4.9 kB, 4 css)
-[ssg] + /products -> dist/products/index.html (14.6 kB, 4 css)
-[ssg] + /products/classic -> dist/products/classic/index.html (10.9 kB, 4 css)
-[ssg] + /products/autonomous -> dist/products/autonomous/index.html (7.6 kB, 4 css)
-[ssg] + / -> dist/index.html (6.3 kB, 5 css)
-[ssg] done, 5 pages written to dist
+[ssg] prerendering explore, decide, checkout
+[ssg] + / -> dist/index.html (7.7 kB, 4 css)
+[ssg] + /products -> dist/products/index.html (14.9 kB, 5 css)
+[ssg] + /products/classic -> dist/products/classic/index.html (11.1 kB, 5 css)
+[ssg] + /stores -> dist/stores/index.html (5.2 kB, 4 css)
+[ssg] + /product/AU-01 -> dist/product/AU-01/index.html (8.8 kB, 8 css)
+[ssg] + /checkout/cart -> dist/checkout/cart/index.html (7.2 kB, 5 css)
+…
+[ssg] done, 31 pages written to dist
 ```
 
 Pages are written next to the shell build, path for path, so a static server can serve them
@@ -179,19 +181,23 @@ as they are: `/products/classic` is `dist/products/classic/index.html`.
 
 #### Which routes are prerendered
 
-Only the routes of the teams that have an SSG pass. Today that is [explore](./explore/),
-whose four routes expand to five pages - the `:category` param is enumerated from the team
-database:
+Every team that has a built route table, which today is all three. A team's routes are read
+from its `dist/routes.js` and a `:param` is enumerated from its own database:
 
-| Route                 | File                                                                      |
-| --------------------- | ------------------------------------------------------------------------- |
-| `/`                   | `dist/index.html`                                                         |
-| `/products`           | `dist/products/index.html`                                                |
-| `/products/:category` | `dist/products/classic/index.html`, `dist/products/autonomous/index.html` |
-| `/stores`             | `dist/stores/index.html`                                                  |
+| Team                        | Route                 | Files                                                                     |
+| --------------------------- | --------------------- | ------------------------------------------------------------------------- |
+| [explore](./explore/)       | `/`                   | `dist/index.html`                                                         |
+|                             | `/products`           | `dist/products/index.html`                                                |
+|                             | `/products/:category` | `dist/products/classic/index.html`, `dist/products/autonomous/index.html` |
+|                             | `/stores`             | `dist/stores/index.html`                                                  |
+| [decide](./decide/)         | `/product/:id`        | `dist/product/<id>/index.html`, one per product                           |
+| [checkout](./checkout/)     | `/checkout/cart`      | `dist/checkout/cart/index.html`                                           |
+|                             | `/checkout/checkout`  | `dist/checkout/checkout/index.html`                                       |
+|                             | `/checkout/thanks`    | `dist/checkout/thanks/index.html`                                         |
 
-The [decide](./decide/) (`/product/:id`) and [checkout](./checkout/) (`/checkout/cart`, …)
-routes are not prerendered yet. They are served the shell and rendered in the browser.
+A page uses components from more than one team - a checkout page uses explore's header, a
+decide page uses checkout's add to cart - so the render loads every team's catalog. That is
+free: the stylesheet index narrows the result back down per page.
 
 #### Serving the built site
 
@@ -217,12 +223,46 @@ navigation actually links to - needs this.
   defines them, so the markup the pass wrote stays and the live DOM is built inside it.
 - A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
   and leaves the stage alone, rather than rendering the same route over the markup. The router
-  still ships, because a prerendered page links to routes no pass prerenders - the decide and
-  checkout pages - and those are rendered in the browser.
+  still ships: a prerendered page links to routes no pass prerenders, and those are rendered in
+  the browser.
 - `npm test -w explore` runs the component tests, which render the built components in
   [Happy DOM](./explore/test/happy-dom-env.ts) - the same way the SSG pass does.
-- `SSG_DEBUG=1 npm run ssg` logs every asset the render asks for, which is the quickest way
-  to see what a page is missing.
+- `CE_RENDER_TRACE=1 npm run ssg` logs every asset the render asks for, and `SSG_TRACE=1`
+  traces what it is waiting for. Between them, a page that renders wrong is usually obvious.
+- `--team <name>` narrows a run to one team (`npm run ssg -w explore`). A full run is the one
+  to use: the pass reads the shell html, and a narrowed run may be reading a page a previous
+  pass wrote over it.
+
+### Rendering without a browser
+
+[`scripts/ce-render.ts`](./scripts/ce-render.ts) is the machinery behind the pass, on its own:
+give it html, a build manifest and a catalog, and it returns the html with the custom elements
+expanded and their stylesheets linked.
+
+```ts
+const html = await ceRenderToString(
+  "<explore-pages-home></explore-pages-home>",
+  manifest, // explore/dist/.vite/manifest.json
+  catalog, // explore/dist/catalog.js
+  { catalogUrl: "/explore/dist/catalog.js", roots: [process.cwd()] },
+);
+```
+
+That is what a server answering with html needs - the markup is already rendered when it
+reaches the browser, instead of a shell that fills itself in later. It is also what the SSG
+pass is built on, and what its tests use to render a single component in isolation.
+
+Three things have to be rewritten for a render to work at all, and all three are
+happy-dom limitations rather than anything about the app:
+
+| What                                                | Why                                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `import Default,{named}from"…"`                     | happy-dom's compiler rewrites imports with a regex that needs `import` + whitespace/`{`, so this is left half rewritten and the module never parses |
+| `import.meta.resolve ? … : …`                        | happy-dom can not compile it, and a module that fails to compile does not throw - the render waits for an import that never resolves, until it times out |
+| the preload helper wrapping every catalog loader     | it fetches the component's stylesheet and **waits for it**; a render links styles from the manifest, and a `<link>` it never asked for only delays the components past serialization |
+
+Only the render sees the rewritten modules - the files on disk are untouched. See
+`renderable()` in [ce-render.ts](./scripts/ce-render.ts).
 
 ### Stylesheets
 
@@ -239,7 +279,9 @@ So the prerender links the stylesheets of every component it expanded. The mappi
 the builds themselves: each one writes a Vite manifest (`manifest: true`) naming the
 stylesheet every module was compiled into, and a module becomes a tag the way the team's own
 `catalog.ts` names it - `pages/category.ce.tsx` in the `explore` build is
-`<explore-pages-category>`. See [component-styles.ts](./src/component-styles.ts).
+`<explore-pages-category>`. See [component-styles.ts](./scripts/component-styles.ts).
+
+For the explore pages that comes out as:
 
 | Prerendered page      | Stylesheets linked                               |
 | --------------------- | ------------------------------------------------ |
@@ -284,10 +326,8 @@ To publish a single team work, run `npm run build` inside the team folder (eg: [
 
 - **Per-route head tags.** Every prerendered page carries the shell's single `<title>`. There
   are no per-route titles, descriptions, canonicals or structured data yet.
-- **Only explore is prerendered.** The decide and checkout routes are still rendered in the
-  browser, so they are the pages a crawler sees as an empty stage.
-- **The mini-cart pops in.** It belongs to the checkout team, so an explore pass leaves its
-  placeholder and the browser fills it later. Its stylesheet is linked and its box is
-  reserved, so the shift is contained rather than gone.
+- **The mini-cart pops in.** It belongs to the checkout team, so a page of any other team
+  leaves its placeholder and the browser fills it later. Its stylesheet is linked and its box
+  is reserved, so the shift is contained rather than gone.
 - **Cold-cache font swap.** Raleway is `font-display: swap`, so a first visit with an empty
   cache reflows the text once the font lands (~0.001 CLS).

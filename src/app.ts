@@ -1,6 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
-import { tagsIn } from "./component-styles";
+import { tagsIn } from "./tags";
 
 import { createRouter } from "./router";
 import type { Router } from "./router";
@@ -9,7 +9,11 @@ import explore_routes from "@mfe-tractor/explore/routes"
 import decide_routes from "@mfe-tractor/decide/routes";
 import checkout_routes from "@mfe-tractor/checkout/routes";
 
-import { PRERENDERED_ATTRIBUTE } from "./prerendered";
+const routes = [...explore_routes, ...decide_routes, ...checkout_routes];
+
+// The marker a prerendered page carries. Written by the SSG pass, so it lives with the
+// tooling - see `scripts/prerendered.ts` for the other half of the contract.
+import { PRERENDERED_ATTRIBUTE } from "../scripts/prerendered";
 
 /**
  * The shell.
@@ -59,17 +63,16 @@ const stage = document.querySelector('vi-router') as ViRouter;
 const prerenderedFor = document.documentElement.getAttribute(PRERENDERED_ATTRIBUTE);
 
 function renderRoute() {
-    const path = window.location.pathname;
+    const url = window.location.pathname + window.location.search;
 
-    // A prerendered page is served with this route's markup already in the stage. Rendering
-    // it again would throw that markup away and draw the same thing: a flash for the user,
-    // and the prerender's work wasted. Everything else still goes through the router - a
-    // route no pass prerenders, or a navigation a page drove itself.
-    if (path === prerenderedFor && stage.firstElementChild) return;
+    // A prerendered page is served with this route's markup already in the stage, so rendering
+    // it again would throw that markup away and draw the same thing: a flash for the user, and
+    // the prerender's work wasted. The marker holds the url the pass rendered, so a query string
+    // makes the two differ - on purpose, because a route may render differently for one (the
+    // decide page picks its variant from `?sku=`).
+    if (url === prerenderedFor && stage.firstElementChild) return;
 
-    // The query is part of what a route renders - the decide page reads `?sku=` - so it goes
-    // with the path.
-    const result = window.router.render(path + window.location.search);
+    const result = window.router.render(url);
 
     stage.innerHTML = result?.html ?? "";
 }
@@ -91,7 +94,7 @@ function init() {
     // Bind the stage and the router together, so pages reach the same router
     // through `vi-router.router` (and the shell through `window.router`).
     const router: ShellRouter = Object.assign(
-        createRouter([...explore_routes, ...decide_routes, ...checkout_routes], { notFound }),
+        createRouter(routes, { notFound }),
         { navigate },
     );
     stage.router = router;
@@ -101,21 +104,21 @@ function init() {
 
     // Cross-document view transitions: before the incoming page is snapshotted, wait for the
     // route's custom elements to upgrade, so the transition lands on real content, not skeletons.
-    addEventListener("pagereveal", (event) => {
-        const transition = (event as Event & { viewTransition?: NavigationViewTransition }).viewTransition;
-        const tags = tagsIn(stage.innerHTML).filter((tag) => tag in catalog && !customElements.get(tag));
+    // addEventListener("pagereveal", (event) => {
+    //     const transition = (event as Event & { viewTransition?: NavigationViewTransition }).viewTransition;
+    //     const tags = tagsIn(stage.innerHTML).filter((tag) => tag in catalog && !customElements.get(tag));
 
-        if (!transition || !window.registry) return;
-        if (!tags.length) return;
+    //     if (!transition || !window.registry) return;
+    //     if (!tags.length) return;
 
-        transition.waitUntil(window.registry.preload(tags).catch(() => { }));
-    });
+    //     transition.waitUntil(window.registry.preload(tags).catch(() => { }));
+    // });
 
     // Links are left to the browser on purpose - see the note at the top of this file. The
     // marker they carry (`data-navigo`) is still the app's "this is an app link" convention:
     // the playground routes on it, and it is what to match on if a page ever wants to navigate
     // client-side instead.
-    window.addEventListener("popstate", renderRoute);
+    // window.addEventListener("popstate", renderRoute);
 
     renderRoute();
 }

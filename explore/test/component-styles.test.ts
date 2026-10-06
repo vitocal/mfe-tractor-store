@@ -5,40 +5,37 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import catalog from "../dist/catalog.js";
+import { tagsIn } from "../../src/tags.ts";
 import {
+  designSystemBuild,
   stylesByTag,
   stylesForTags,
-  tagForModule,
-  tagsIn,
+  teamBuild,
   unknownTags,
   withStylesheets,
   withoutStylesheets,
-} from "../../src/component-styles.ts";
-import type { ComponentBuild, Manifest } from "../../src/component-styles.ts";
+} from "../../scripts/component-styles.ts";
+import type { ComponentBuild, Manifest } from "../../scripts/component-styles.ts";
 
 /** The team's own build, which the test script runs first */
 const TEAM_DIR = Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const exploreBuild: ComponentBuild = {
-  prefix: "explore",
-  extension: ".ce.tsx",
-  manifest: JSON.parse(
+const exploreBuild: ComponentBuild = teamBuild(
+  "explore",
+  ".ce.tsx",
+  JSON.parse(
     FS.readFileSync(Path.join(TEAM_DIR, "dist", ".vite", "manifest.json"), "utf8"),
   ) as Manifest,
-};
+);
 
 /** A build with the interesting shapes in it: components, and modules that are not */
-const demoBuild: ComponentBuild = {
-  prefix: "demo",
-  extension: ".ce.tsx",
-  manifest: {
-    "pages/home.ce.tsx": { file: "chunks/home.ce.js", css: ["assets/home-abc.css"] },
-    "components/header.ce.tsx": { file: "chunks/header.ce.js", css: ["assets/header-abc.css"] },
-    "components/plain.ce.tsx": { file: "chunks/plain.ce.js" },
-    "routes.ts": { file: "routes.js" },
-    "chunks/shared.js": { file: "chunks/shared.js" },
-  },
-};
+const demoBuild: ComponentBuild = teamBuild("demo", ".ce.tsx", {
+  "pages/home.ce.tsx": { file: "chunks/home.ce.js", css: ["assets/home-abc.css"] },
+  "components/header.ce.tsx": { file: "chunks/header.ce.js", css: ["assets/header-abc.css"] },
+  "components/plain.ce.tsx": { file: "chunks/plain.ce.js" },
+  "routes.ts": { file: "routes.js" },
+  "chunks/shared.js": { file: "chunks/shared.js" },
+});
 
 describe("component styles", () => {
   describe("tagsIn", () => {
@@ -57,13 +54,32 @@ describe("component styles", () => {
     });
   });
 
-  describe("tagForModule", () => {
+  describe("teamBuild", () => {
     it("names a component the way its catalog does", () => {
-      assert.equal(tagForModule(exploreBuild, "pages/category.ce.tsx"), "explore-pages-category");
-      assert.equal(
-        tagForModule(exploreBuild, "components/header.ce.tsx"),
-        "explore-components-header",
-      );
+      assert.equal(exploreBuild.tagFor("pages/category.ce.tsx"), "explore-pages-category");
+      assert.equal(exploreBuild.tagFor("components/header.ce.tsx"), "explore-components-header");
+    });
+
+    it("has no tag for a module that is not a component", () => {
+      assert.equal(exploreBuild.tagFor("routes.ts"), null);
+      assert.equal(exploreBuild.tagFor("chunks/utils.js"), null);
+    });
+  });
+
+  describe("designSystemBuild", () => {
+    const shell = designSystemBuild({
+      "src/components/button.tsx": { file: "chunks/button.js", css: ["assets/button-abc.css"] },
+      "src/app.ts": { file: "index.js" },
+      "src/catalog.ts": { file: "index.js" },
+    });
+
+    it("names a design system component after its file", () => {
+      assert.equal(shell.tagFor("src/components/button.tsx"), "ds-button");
+    });
+
+    it("has no tag for anything else the shell emits", () => {
+      assert.equal(shell.tagFor("src/app.ts"), null);
+      assert.equal(shell.tagFor("src/catalog.ts"), null);
     });
   });
 
