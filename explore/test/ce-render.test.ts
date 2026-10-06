@@ -4,10 +4,9 @@ import Path from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import type { Catalog } from "ce-autoloader";
-
 import catalog from "../dist/catalog.js";
 import { ceRenderToString, splitMixedImports, stylesFor } from "../../scripts/ce-render.ts";
+import type { Catalog } from "../../scripts/ce-render.ts";
 import type { Manifest } from "../../scripts/component-styles.ts";
 
 /** The team's own build, which the test script runs first */

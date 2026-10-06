@@ -267,3 +267,35 @@ vi-router {
     translate: 0 0;
   }
 }
+
+/**
+ * The ribbon that says how the page on screen was rendered - see `src/ribbon.ts`.
+ *
+ * Fixed, so it cannot shift anything: this app counts its layout shifts, and a badge is not
+ * worth one. Nothing else in the app sets a z-index, so a small one keeps it on top.
+ */
+.mode-ribbon {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 10;
+
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+
+  color: #fff;
+  background-color: #000;
+
+  cursor: help;
+  user-select: none;
+}
+
+/* A prerendered page is the one worth pointing out, so it gets the brand colour */
+.mode-ribbon[data-mode="ssg"] {
+  background-color: #ff5a55;
+}
+

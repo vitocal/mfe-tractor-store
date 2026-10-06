@@ -20,7 +20,6 @@ import Path from "node:path";
 
 import { ServerRenderer, ServerRendererLogLevelEnum } from "@happy-dom/server-renderer";
 import type { IFetchInterceptor, IOptionalBrowserSettings } from "happy-dom";
-import type { Catalog } from "ce-autoloader";
 
 import { withStylesheets } from "./component-styles.ts";
 import type { Manifest } from "./component-styles.ts";
@@ -288,6 +287,16 @@ function tagTail(module: string): string {
     .split("/")
     .join("-");
 }
+
+/**
+ * A catalog, as far as a render is concerned: tag name -> loader.
+ *
+ * `ce-autoloader` exports a `Catalog` of its own, but its `exports` map only re-exports the
+ * default, so the type is not reachable from the package root - hence this one. Nothing here
+ * calls a loader anyway: a render is handed the catalog's *url*, and the page's own setup script
+ * loads the components. All a render reads is the tag names.
+ */
+export type Catalog = Record<string, unknown>;
 
 /**
  * The stylesheets the tags in `html` need, resolved from a build manifest.

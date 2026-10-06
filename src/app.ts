@@ -1,5 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
+import { createRibbon } from "./ribbon";
 import { tagsIn } from "./tags";
 
 import { createRouter } from "./router";
@@ -55,6 +56,12 @@ if (!customElements.get("vi-router")) {
 
 const stage = document.querySelector('vi-router') as ViRouter;
 
+/**
+ * Says how the markup on screen was produced - see `./ribbon.ts`. It lives on `<body>`, outside
+ * the stage, so re-rendering a route cannot take it with it.
+ */
+const showMode = createRibbon(document.body);
+
 /** The route this document was prerendered for, or null when it is a bare shell */
 const prerenderedFor = document.documentElement.getAttribute(PRERENDERED_ATTRIBUTE);
 
@@ -66,11 +73,15 @@ function renderRoute() {
     // the prerender's work wasted. The marker holds the url the pass rendered, so a query string
     // makes the two differ - on purpose, because a route may render differently for one (the
     // decide page picks its variant from `?sku=`).
-    if (url === prerenderedFor && stage.firstElementChild) return;
+    if (url === prerenderedFor && stage.firstElementChild) {
+        showMode("ssg");
+        return;
+    }
 
     const result = window.router.render(url);
 
     stage.innerHTML = result?.html ?? "";
+    showMode("spa");
 }
 
 /** Client-side navigation: updates the url, scrolls to top and re-renders the active route */

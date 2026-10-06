@@ -70,6 +70,20 @@ mode costs, what bit us building this, and where the trade-offs landed - see
 | Good for                  | development                                                   | crawlers and first paint               |
 | Run with                  | `npm run dev`                                                 | `npm run ssg` + `npm run preview`      |
 
+### Which mode am I looking at?
+
+A ribbon in the bottom right corner says it: black **SPA** when the shell rendered the route in
+the browser, coral **SSG** when the page was served prerendered and the shell left the markup
+alone. It follows what you are looking at, not what a build was configured to do: on a built site
+a route that no pass covers is a page the browser rendered, and it says so. So does
+`/checkout/thanks` reached by placing an order - that navigation happens in the browser, through
+`router.navigate` - while the same url typed into the address bar arrives prerendered.
+
+The shell is the only thing that knows, so [`src/ribbon.ts`](./src/ribbon.ts) is mounted from
+[`src/app.ts`](./src/app.ts), outside the stage, so re-rendering a route cannot take it with it.
+The prerender registers the catalogs but never runs the shell's own bootstrap, which is why the
+ribbon is in none of the files the pass writes.
+
 ### SPA mode
 
 The shell is the only html document. It boots a [router](./src/router.ts) over the team
