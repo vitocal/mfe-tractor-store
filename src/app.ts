@@ -5,11 +5,7 @@ import { tagsIn } from "./tags";
 import { createRouter } from "./router";
 import type { Router } from "./router";
 
-import explore_routes from "@mfe-tractor/explore/routes"
-import decide_routes from "@mfe-tractor/decide/routes";
-import checkout_routes from "@mfe-tractor/checkout/routes";
-
-const routes = [...explore_routes, ...decide_routes, ...checkout_routes];
+import routes from "./routes";
 
 // The marker a prerendered page carries. Written by the SSG pass, so it lives with the
 // tooling - see `scripts/prerendered.ts` for the other half of the contract.
