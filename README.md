@@ -370,6 +370,40 @@ that mount by hand.
 
 `npm test` at the root runs all three.
 
+## Performance
+
+`npm run bench` measures what [`ceRenderToString`](./scripts/ce-render.ts) costs, on the pages the
+prerender pass writes - see [`scripts/bench-render.ts`](./scripts/bench-render.ts). It prints a
+table per team, the slowest pages, and where a render's time goes:
+
+```
+  per render    median 21.5ms, mean 22.4ms, p95 31.2ms, max 43.7ms
+
+  where the time goes (median, one page per team)
+  team           renderer    empty page      page        stylesheets
+  explore        0.04ms      18.7ms 85%      22.1ms      0.02ms
+```
+
+Two things that table says, and neither is what you would guess:
+
+- **Almost none of a render is the page.** A document with nothing in it costs ~90% of a full page:
+  the window, the catalogs, and the serialization. A page's own components are the other ~10%, and
+  linking its stylesheets is a rounding error.
+- **A renderer is free to build, but not to use.** `new ServerRenderer` is a configuration object;
+  the window behind it is created per render, so a caller with many pages pays it many times.
+
+So the way to make it fast is to render many pages through one renderer, which is what the pass
+does - and the benchmark measures that too, along with overlapping them:
+
+```
+  one renderer  31 pages in 293.4ms: 9.46ms a page, 2.24x one at a time
+  concurrency   4 at a time on 8 cores: 278.0ms for 31 pages, 2.37x one at a time
+```
+
+The numbers above are from an 8 core laptop, and the shape of them is what to read rather than the
+digits. Options: `--team=explore,decide`, `--iterations=3` (passes over every page), `--samples=5`
+(per step of the breakdown), `--pages=31`, `--concurrency=4` (0 to skip that pass), `--json`.
+
 ## Preview a single team
 
 In your terminal, enter the team folder and run `npm run dev`.

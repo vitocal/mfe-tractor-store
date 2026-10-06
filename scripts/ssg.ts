@@ -180,7 +180,7 @@ function catalogUrls(teams: readonly Team[]): string[] {
 }
 
 /** The built shell, the page every route starts from */
-async function readShell(): Promise<string> {
+export async function readShell(): Promise<string> {
   try {
     // The pass writes the root page over the shell html, so a narrowed run reads a page back
     // instead of the shell. Drop the block a previous run added, or every page would inherit
@@ -196,7 +196,7 @@ async function readShell(): Promise<string> {
 }
 
 /** The built route table of a team */
-async function readRoutes(team: Team): Promise<Route[]> {
+export async function readRoutes(team: Team): Promise<Route[]> {
   const file = Path.join(ROOT_DIR, team.name, "dist", "routes.js");
 
   try {
@@ -248,7 +248,7 @@ export interface SsgOptions {
 }
 
 /** A page to render: which team it belongs to, and what to write where */
-interface Page {
+export interface Page {
   team: string;
   path: string;
   url: string;
@@ -257,7 +257,7 @@ interface Page {
 }
 
 /** Every page a team's route table wants prerendered */
-function pagesFor(
+export function pagesFor(
   template: string,
   team: string,
   routes: Route[],

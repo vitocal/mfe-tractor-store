@@ -41,5 +41,6 @@
         "explore",
         "decide",
         "checkout",
+        "scripts/**/*"
     ]
 }

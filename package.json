@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "ssg": "npm run build --workspaces && npm run build && node scripts/ssg.ts",
+    "bench": "npm run build --workspaces && npm run build && node scripts/bench-render.ts",
     "test": "npm test --workspaces",
     "preview:ssg": "npm run ssg && vite preview"
   },
