@@ -75,10 +75,11 @@ function init() {
 
     // Cross-document view transitions: before the incoming page is snapshotted, wait for the
     // route's custom elements to upgrade, so the transition lands on real content, not skeletons.
-    window.addEventListener("pagereveal", (event) => {
+    addEventListener("pagereveal", (event) => {
         const transition = (event as Event & { viewTransition?: NavigationViewTransition }).viewTransition;
         const tags = tagsIn(stage.innerHTML).filter((tag) => tag in catalog && !customElements.get(tag));
         console.log("[pagereveal] vt=", !!transition, "tags=", tags, "registry=", !!window.registry);
+
         if (!transition || !window.registry) return;
         if (!tags.length) return;
 

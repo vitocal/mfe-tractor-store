@@ -13,7 +13,7 @@ export const Home = ({ }) => {
     const recsRef = useUpgradedProps({ skus });
 
     return <div data-boundary-page="explore">
-        <explore-components-header loading="eager" style="min-height: 187px" class="appear-from-top appear-once"></explore-components-header>
+        <explore-components-header loading="eager" style="min-height: 187px"></explore-components-header>
         <main id="main" className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>

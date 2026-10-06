@@ -17,19 +17,6 @@
   }
 </style>
 
-<!-- [VT-TEST] temporary -->
-<script>
-  addEventListener("pagereveal", (e) => {
-    const vt = e.viewTransition;
-    console.log("[VT-test] pagereveal vt=", !!vt, "t=", Math.round(performance.now()));
-    if (!vt) return;
-    const t0 = performance.now();
-    vt.ready.then(() => console.log("[VT-test] ready +", Math.round(performance.now() - t0)));
-    vt.finished.then(() => console.log("[VT-test] finished +", Math.round(performance.now() - t0)));
-    vt.waitUntil(new Promise((r) => setTimeout(r, 2000)));
-  });
-</script>
-
 <link rel="apple-touch-icon" sizes="180x180" href="/cdn/img/meta/apple-touch-icon.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/cdn/img/meta/favicon-32x32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="/cdn/img/meta/favicon-16x16.png" />
@@ -43,15 +30,19 @@
 
 <link rel="stylesheet" href="./src/styles.css" />
 
-
-
 <script src="/cdn/js/helper.js" defer></script>
 
+<script type="module" src="./src/app.ts" blocking="render"></script>
+
+<!-- Preloads -->
 <link rel="preload" href="/cdn/img/logo.svg" as="image" />
+
+<script type="module" src="/node_modules/@mfe-tractor/explore/components/header.ce.tsx" blocking="render"></script>
+
 </head>
 
 <body>
-  <script type="module" src="./src/app.ts" async></script>
+
   <vi-router class="tractor-app"></vi-router>
 </body>
 
