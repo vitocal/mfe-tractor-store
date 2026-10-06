@@ -21,7 +21,7 @@ export const Header = () => {
             <Navigation />
           </div>
           <div className="e_Header__cart">
-            <checkout-c-minicart></checkout-c-minicart>
+            <checkout-components-minicart></checkout-components-minicart>
           </div>
         </div>
       </div>

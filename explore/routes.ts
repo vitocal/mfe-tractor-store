@@ -3,10 +3,6 @@ import type { Route } from "../src/router.ts";
 /**
  * Explore team route table.
  *
- * The playground, the dev server (spa fallback) and the shell app all read the
- * routes from here, so paths and callbacks stay in a single place.
- * Every route has a `name`, a readable `path` (with optional `:params`) and a
- * `render` callback that receives the parameters and returns the page html.
  */
 export const routes: Route[] = [
   {

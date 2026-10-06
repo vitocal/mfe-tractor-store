@@ -8,7 +8,7 @@ const vendors = {
     "json-viewer": "https://esm.sh/@alenaksu/json-viewer?standalone"
 }
 
-console.log(decide);
+console.log(checkout);
 
 export const catalog = {
     ...ds,

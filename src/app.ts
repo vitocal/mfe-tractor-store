@@ -1,11 +1,19 @@
 import CEAutoLoader from "ce-autoloader";
-
 import catalog from "./catalog";
+
 import { createRouter } from "./router";
 import type { Router } from "./router";
 
 import explore_routes from "@mfe-tractor/explore/routes"
 import decide_routes from "@mfe-tractor/decide/routes";
+import checkout_routes from "./checkout/routes";
+
+const routes = [
+    ...explore_routes,
+    ...decide_routes,
+    ...checkout_routes,
+]
+console.log(routes);
 
 const stage = document.querySelector('vi-router');
 const useHash = true;
@@ -27,7 +35,7 @@ function init() {
         render: () => `<h1>404 Not Found</h1>`
     };
 
-    window.router = createRouter([...explore_routes, ...decide_routes], { notFound });
+    window.router = createRouter([...explore_routes, ...decide_routes, ...checkout_routes], { notFound });
     window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
 
     // Intercept app links (data-navigo), navigating client-side like the shell app

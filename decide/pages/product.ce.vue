@@ -17,7 +17,7 @@
             <decide-components-variant v-for="v in product.variants" :key="v.sku" v-bind="v" :id="props.id"
               :selected="v.sku === variant.sku"></decide-components-variant>
           </ul>
-          <checkout-c-addtocart :sku="variant.sku" class="appear-elegant"></checkout-c-addtocart>
+          <checkout-components-addtocart :sku="variant.sku" class="appear-elegant"></checkout-components-addtocart>
         </div>
       </div>
       <div class="d_ProductPage__notfound" v-else>
