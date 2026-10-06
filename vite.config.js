@@ -14,6 +14,8 @@ export default defineConfig({
     emptyOutDir: true,
     modulePreload: false,
     cssCodeSplit: true,
+    // The SSG reads `.vite/manifest.json` to find the stylesheets a page's components need.
+    manifest: true,
     rollupOptions: {
       output: {
         entryFileNames: "[name].js",

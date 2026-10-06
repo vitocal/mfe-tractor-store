@@ -27,6 +27,15 @@ import { ServerRenderer, ServerRendererLogLevelEnum } from "@happy-dom/server-re
 
 import { createRouter } from "../src/router.ts";
 import type { Route } from "../src/router.ts";
+import {
+  stylesByTag,
+  stylesForTags,
+  tagsIn,
+  unknownTags,
+  withStylesheets,
+  withoutStylesheets,
+} from "../src/component-styles.ts";
+import type { ComponentBuild, Manifest } from "../src/component-styles.ts";
 
 import routes from "./dist/routes.js";
 
@@ -38,6 +47,18 @@ const ROOT_DIR = Path.resolve(TEAM_DIR, "..");
 /** Built team components, and the url prefix the render fetches them from */
 const CHUNKS_DIR = Path.join(TEAM_DIR, "dist", "chunks");
 const CHUNKS_URL = toUrlPath(Path.relative(ROOT_DIR, CHUNKS_DIR));
+
+/**
+ * The builds whose components can end up in an explore page, and how each names its tags.
+ *
+ * The prefix and the extension mirror what each team's `catalog.ts` does, so a module in a
+ * manifest resolves to the same tag the catalog registers.
+ */
+const COMPONENT_BUILDS = [
+  { dir: TEAM_DIR, prefix: "explore", extension: ".ce.tsx" },
+  { dir: Path.join(ROOT_DIR, "decide"), prefix: "decide", extension: ".ce.vue" },
+  { dir: Path.join(ROOT_DIR, "checkout"), prefix: "checkout", extension: ".ce.svelte" },
+];
 
 /** The built shell, the page every route starts from */
 const SHELL_HTML = Path.join(ROOT_DIR, "dist", "index.html");
@@ -171,6 +192,8 @@ function makeResponder(missing: Set<string>) {
     const pathname = decodeURIComponent(new URL(request.url).pathname);
     const empty = (type: string) => new window.Response("", { headers: { "content-type": type } });
 
+    if (process.env.SSG_DEBUG) console.error(`[ssg] fetch ${pathname}`);
+
     if (pathname.endsWith(".css")) return empty("text/css");
 
     const isComponent = pathname.startsWith(`${CHUNKS_URL}/`);
@@ -215,12 +238,37 @@ async function findChunks(): Promise<string[]> {
 /** The built shell, the page every route starts from */
 async function readShell(): Promise<string> {
   try {
-    return withExplicitHead(await FS.readFile(SHELL_HTML, "utf8"));
+    // The pass writes the root page over the shell html, so on a rerun its input is its own
+    // output. Drop the block a previous run added, or every page would inherit the root
+    // page's stylesheets on top of its own.
+    const shell = withoutStylesheets(await FS.readFile(SHELL_HTML, "utf8"));
+
+    return withExplicitHead(shell);
   } catch {
     throw new Error(
       `The built shell is missing (${Path.relative(ROOT_DIR, SHELL_HTML)}). Run "npm run build" first.`,
     );
   }
+}
+
+/** The manifest a build wrote: every module it emitted, with the stylesheet it needs */
+async function readManifest(dir: string): Promise<Manifest> {
+  const file = Path.join(dir, "dist", ".vite", "manifest.json");
+
+  try {
+    return JSON.parse(await FS.readFile(file, "utf8"));
+  } catch {
+    throw new Error(
+      `The build manifest is missing (${Path.relative(ROOT_DIR, file)}). Run "npm run build --workspaces" first.`,
+    );
+  }
+}
+
+/** The component builds a page can use, with what each of them emitted */
+async function readComponentBuilds(): Promise<ComponentBuild[]> {
+  return await Promise.all(
+    COMPONENT_BUILDS.map(async (build) => ({ ...build, manifest: await readManifest(build.dir) })),
+  );
 }
 
 /* ---------------------------------------------------------------------- api -- */
@@ -232,6 +280,8 @@ export interface SsgPage {
   url: string;
   /** Absolute path of the written file */
   outputFile: string;
+  /** Stylesheets linked into the page, in the order they were written */
+  styles: string[];
   /** Size of the written file in bytes */
   bytes: number;
 }
@@ -240,6 +290,8 @@ export interface SsgResult {
   pages: SsgPage[];
   /** Assets the render asked for that no static root could provide */
   missing: string[];
+  /** Components a page used that their build declares no stylesheet for */
+  unstyled: string[];
   /** Directory the pages were written to */
   outputDirectory: string;
 }
@@ -259,6 +311,7 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
   const outputDirectory = options.outputDirectory ?? OUTPUT_DIR;
   const template = await readShell();
   const chunks = await findChunks();
+  const styles = stylesByTag(await readComponentBuilds());
   const router = createRouter(routes as Route[]);
 
   const items = (routes as Route[]).flatMap((route) =>
@@ -276,6 +329,7 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
   );
 
   const missing = new Set<string>();
+  const unstyledTags = new Set<string>();
 
   const renderer = new ServerRenderer({
     logLevel: ServerRendererLogLevelEnum.error,
@@ -317,15 +371,37 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
       throw new Error(`${path} rendered an empty stage, no component was upgraded`);
     }
 
+    // The markup is already in the document, so its stylesheets have to be too. Left to the
+    // loader they arrive with the javascript, which paints the page unstyled first.
+    const tags = tagsIn(written);
+    const undeclared = unknownTags(styles, tags, COMPONENT_BUILDS.map(({ prefix }) => prefix));
+
+    if (undeclared.length) {
+      throw new Error(`${path} uses component(s) no build declares: ${undeclared.join(", ")}`);
+    }
+
+    const { urls, unstyled } = stylesForTags(styles, tags);
+    const page = withStylesheets(written, urls);
+
+    unstyled.forEach((tag) => unstyledTags.add(tag));
+
+    if (page !== written) await FS.writeFile(result.outputFile, page);
+
     pages.push({
       path,
       url: result.url ?? "",
       outputFile: result.outputFile,
-      bytes: written.length,
+      styles: urls,
+      bytes: page.length,
     });
   }
 
-  return { pages, missing: [...missing].sort(), outputDirectory };
+  return {
+    pages,
+    missing: [...missing].sort(),
+    unstyled: [...unstyledTags].sort(),
+    outputDirectory,
+  };
 }
 
 /* ---------------------------------------------------------------------- cli -- */
@@ -337,15 +413,20 @@ async function main(): Promise<void> {
 
   console.log(`[ssg] explore: rendering ${(routes as Route[]).length} routes`);
 
-  const { pages, missing, outputDirectory: out } = await generate({ outputDirectory });
+  const { pages, missing, unstyled, outputDirectory: out } = await generate({ outputDirectory });
 
   for (const page of pages) {
     const file = Path.relative(ROOT_DIR, page.outputFile);
-    console.log(`[ssg] + ${page.path} -> ${file} (${(page.bytes / 1024).toFixed(1)} kB)`);
+    const css = `${page.styles.length} css`;
+    console.log(`[ssg] + ${page.path} -> ${file} (${(page.bytes / 1024).toFixed(1)} kB, ${css})`);
   }
 
   if (missing.length) {
     console.warn(`[ssg] ! ${missing.length} asset(s) not found: ${missing.join(", ")}`);
+  }
+
+  if (unstyled.length) {
+    console.warn(`[ssg] ! no stylesheet declared for: ${unstyled.join(", ")}`);
   }
 
   console.log(`[ssg] done, ${pages.length} pages written to ${Path.relative(ROOT_DIR, out)}`);

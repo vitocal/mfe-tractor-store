@@ -13,6 +13,8 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     emptyOutDir: true,
+    // The SSG reads `.vite/manifest.json` to find the stylesheet each component needs.
+    manifest: true,
     modulePreload: {
       polyfill: false
     },

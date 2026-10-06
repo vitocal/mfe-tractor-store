@@ -10,12 +10,12 @@
   Chromium resolves the opt-in from the *active* stylesheets when <body> is inserted, and an external
   <link rel="stylesheet"> is not guaranteed to be loaded by then (the transition is then skipped with
   "ViewTransition opt-in disabled"). An inline <style> is parsed synchronously, so declare it here.
-    <style>
-      @view-transition {
-        navigation: auto;
-      }
-    </style>
   -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+</style>
 
 <link rel="apple-touch-icon" sizes="180x180" href="/cdn/img/meta/apple-touch-icon.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/cdn/img/meta/favicon-32x32.png" />

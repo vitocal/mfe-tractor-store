@@ -1,5 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
+import { tagsIn } from "./component-styles";
 
 import { createRouter } from "./router";
 import type { Router } from "./router";
@@ -15,11 +16,6 @@ type ShellRouter = Router & { navigate: (path: string) => void };
 
 /** The (still experimental) bits of the View Transitions API the shell uses */
 type NavigationViewTransition = { waitUntil(promise: Promise<unknown>): void };
-
-/** Custom element tags referenced by the given html */
-function tagsIn(html: string): string[] {
-    return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
-}
 
 /**
  * The shell stage.
