@@ -9,7 +9,7 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 
 ## Architecture
 
-- Each team ([checkout](./checkout/), [decide](./checkout/) and [explore](./explore/)) has an isolated repository.
+- Each team ([checkout](./checkout/), [decide](./decide/) and [explore](./explore/)) has an isolated repository.
 - Each team can choose their frontend technology stack, as long as they export web-components.
 - Each team can use another team component inside their projects without importing/linking them before-hand.
   - Teams can mock components for local isolated development.
@@ -17,7 +17,7 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 - Each team publishes a bunch of files, independently of one another:
   - A [routing file](./checkout/routes.ts)
   - A web-components [catalog](./checkout/catalog.ts)
-  - Several compiled [web-components files](./checkout/components/minicart.svelte) and it's assets.
+  - Several compiled [web-components files](./checkout/components/minicart.ce.svelte) and its assets.
 
 - A shell glues/bundles them together:
   - A [router](./src/router.ts) reads each routing table
@@ -57,7 +57,9 @@ npm run preview:ssg
 ## Rendering modes
 
 Both modes load the same components, from the same catalogs, with the same lazy loading.
-The only difference is **when the page markup is produced**.
+The only difference is **when the page markup is produced**. For the longer story - what each
+mode costs, what bit us building this, and where the trade-offs landed - see
+[POST-MORTEM.md](./POST-MORTEM.md).
 
 |                           | SPA mode                                                      | SSG mode                               |
 | ------------------------- | ------------------------------------------------------------- | -------------------------------------- |
@@ -73,7 +75,12 @@ The only difference is **when the page markup is produced**.
 The shell is the only html document. It boots a [router](./src/router.ts) over the team
 route tables, renders the matched route into `<vi-router>`, and lets
 [ce-autoloader](./src/app.ts) discover the custom elements in that markup and lazy-load
-them. Navigation is client-side, so a page only exists once the JavaScript has run.
+them. The markup only exists once the JavaScript has run, which is why this mode is for
+development rather than for crawlers.
+
+Links stay ordinary links, so a navigation is a document navigation: the server answers with
+the same shell and the router renders the route for the new url. That is what the
+cross-document view transitions in [index.html](./index.html) are set up for.
 
 ```mermaid
 sequenceDiagram
@@ -206,9 +213,12 @@ navigation actually links to - needs this.
   both. `npm run preview` warns when `dist/` has no prerendered page.
 - The shell build consumes the published team catalogs and routes, so the teams have to be
   built first (`npm run build --workspaces`). `npm run ssg` builds them for you.
-- The prerendered markup is there for crawlers and for the first paint. The components still
-  render again in the browser once they load, so the html and the live DOM end up the same
-  but the markup is not hydrated.
+- The components upgrade in place: the loader finds the tags the pass left in the document and
+  defines them, so the markup the pass wrote stays and the live DOM is built inside it.
+- A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
+  and leaves the stage alone, rather than rendering the same route over the markup. The router
+  still ships, because a prerendered page links to routes no pass prerenders - the decide and
+  checkout pages - and those are rendered in the browser.
 - `npm test -w explore` runs the component tests, which render the built components in
   [Happy DOM](./explore/test/happy-dom-env.ts) - the same way the SSG pass does.
 - `SSG_DEBUG=1 npm run ssg` logs every asset the render asks for, which is the quickest way
@@ -270,6 +280,14 @@ preview its components in isolation.
 
 To publish a single team work, run `npm run build` inside the team folder (eg: [explore](./explore/))
 
-## WIP
+## Known gaps
 
-In SPA mode, the routing is done client-side. Browser navigation with hash urls `/#/products/classic`
+- **Per-route head tags.** Every prerendered page carries the shell's single `<title>`. There
+  are no per-route titles, descriptions, canonicals or structured data yet.
+- **Only explore is prerendered.** The decide and checkout routes are still rendered in the
+  browser, so they are the pages a crawler sees as an empty stage.
+- **The mini-cart pops in.** It belongs to the checkout team, so an explore pass leaves its
+  placeholder and the browser fills it later. Its stylesheet is linked and its box is
+  reserved, so the shift is contained rather than gone.
+- **Cold-cache font swap.** Raleway is `font-display: swap`, so a first visit with an empty
+  cache reflows the text once the font lands (~0.001 CLS).

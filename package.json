@@ -16,8 +16,7 @@
     "checkout"
   ],
   "dependencies": {
-    "ce-autoloader": "^0.2.0-rc",
-    "navigo": "^8.11.1"
+    "ce-autoloader": "^0.2.0-rc"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

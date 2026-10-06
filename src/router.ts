@@ -5,6 +5,13 @@
  * must stay dependency free and side-effect free: no `window`, no `document`
  * and no external packages.
  *
+ * Three callers, which is why it ships in the shell bundle even on a prerendered page:
+ *
+ * - the SSG pass, to render a route into a file at build time,
+ * - the dev server and the preview server, to decide whether a url is a page of this app,
+ * - the browser, for the routes no pass prerenders (the decide and checkout pages) and for
+ *   navigation a page drives itself.
+ *
  * A route is a `name`, a readable `path` (with optional `:params`) and a
  * `render` callback that receives the matched parameters and returns html.
  *

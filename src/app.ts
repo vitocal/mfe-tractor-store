@@ -9,7 +9,27 @@ import explore_routes from "@mfe-tractor/explore/routes"
 import decide_routes from "@mfe-tractor/decide/routes";
 import checkout_routes from "@mfe-tractor/checkout/routes";
 
-console.log("[shell] module loaded", location.pathname);
+import { PRERENDERED_ATTRIBUTE } from "./prerendered";
+
+/**
+ * The shell.
+ *
+ * It does two things, and which one matters depends on how the page was served:
+ *
+ * - **It boots the loader.** `ce-autoloader` upgrades whatever custom elements the markup
+ *   holds. On a prerendered page that is the whole job.
+ * - **It renders the route.** The router turns a url into the markup of the route that
+ *   matches it. That is what produces a page in dev, and what serves the routes no pass
+ *   prerenders - the decide and checkout pages - in a built site.
+ *
+ * Both live in one bundle because a prerendered page can link to a route that was never
+ * prerendered, so the router has to be there even on a page where it renders nothing.
+ *
+ * Links are deliberately not intercepted: every explore page is prerendered, so a plain
+ * document navigation lands on real markup, which is what the cross-document view transitions
+ * in `index.html` are set up for. Only a page that drives navigation itself calls `navigate`
+ * - the checkout page, after placing an order.
+ */
 
 /** The shell router, extended with client-side navigation so pages can drive it */
 type ShellRouter = Router & { navigate: (path: string) => void };
@@ -34,11 +54,22 @@ if (!customElements.get("vi-router")) {
 }
 
 const stage = document.querySelector('vi-router') as ViRouter;
-const useHash = true;
+
+/** The route this document was prerendered for, or null when it is a bare shell */
+const prerenderedFor = document.documentElement.getAttribute(PRERENDERED_ATTRIBUTE);
 
 function renderRoute() {
-    // URL: http://localhost:4001/products/:id?search=1
-    const result = window.router.render(window.location.pathname + window.location.search);
+    const path = window.location.pathname;
+
+    // A prerendered page is served with this route's markup already in the stage. Rendering
+    // it again would throw that markup away and draw the same thing: a flash for the user,
+    // and the prerender's work wasted. Everything else still goes through the router - a
+    // route no pass prerenders, or a navigation a page drove itself.
+    if (path === prerenderedFor && stage.firstElementChild) return;
+
+    // The query is part of what a route renders - the decide page reads `?sku=` - so it goes
+    // with the path.
+    const result = window.router.render(path + window.location.search);
 
     stage.innerHTML = result?.html ?? "";
 }
@@ -49,7 +80,6 @@ function navigate(path: string) {
     window.scrollTo({ top: 0, behavior: "smooth" });
     renderRoute();
 }
-
 
 function init() {
     const notFound = {
@@ -74,7 +104,6 @@ function init() {
     addEventListener("pagereveal", (event) => {
         const transition = (event as Event & { viewTransition?: NavigationViewTransition }).viewTransition;
         const tags = tagsIn(stage.innerHTML).filter((tag) => tag in catalog && !customElements.get(tag));
-        console.log("[pagereveal] vt=", !!transition, "tags=", tags, "registry=", !!window.registry);
 
         if (!transition || !window.registry) return;
         if (!tags.length) return;
@@ -82,19 +111,10 @@ function init() {
         transition.waitUntil(window.registry.preload(tags).catch(() => { }));
     });
 
-    // Intercept app links (data-navigo), navigating client-side like the shell app
-    // `data-navigo` may live on a wrapper custom-element (eg: <ds-button href data-navigo>),
-    // so match any element that carries both the marker and an href.
-    stage.addEventListener("click", (event) => {
-        const link = event.target instanceof Element && event.target.closest("a[data-navigo], [data-navigo][href]");
-        if (!link) return;
-
-        const url = new URL(link.getAttribute("href"), window.location.href);
-        if (url.origin !== window.location.origin) return;
-
-        // event.preventDefault();
-        // navigate(url.pathname + url.search);
-    });
+    // Links are left to the browser on purpose - see the note at the top of this file. The
+    // marker they carry (`data-navigo`) is still the app's "this is an app link" convention:
+    // the playground routes on it, and it is what to match on if a page ever wants to navigate
+    // client-side instead.
     window.addEventListener("popstate", renderRoute);
 
     renderRoute();

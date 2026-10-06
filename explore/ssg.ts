@@ -36,6 +36,7 @@ import {
   withoutStylesheets,
 } from "../src/component-styles.ts";
 import type { ComponentBuild, Manifest } from "../src/component-styles.ts";
+import { markPrerendered } from "../src/prerendered.ts";
 
 import routes from "./dist/routes.js";
 
@@ -381,7 +382,10 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
     }
 
     const { urls, unstyled } = stylesForTags(styles, tags);
-    const page = withStylesheets(written, urls);
+
+    // The marker is how the shell knows this page already holds its route's markup, so it can
+    // leave it alone instead of rendering the same route over it.
+    const page = markPrerendered(withStylesheets(written, urls), path);
 
     unstyled.forEach((tag) => unstyledTags.add(tag));
 
