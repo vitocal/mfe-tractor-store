@@ -1,8 +1,12 @@
 import { defineConfig } from "vite";
 
+import spaFallback from "./src/spa-fallback.ts";
+
 export default defineConfig({
   appType: "mpa",
-  plugins: [],
+  plugins: [
+    spaFallback(),
+  ],
   build: {
     outDir: "dist/",
     emptyOutDir: true,
