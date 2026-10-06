@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-p-cart", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-pages-cart", shadow: "none" }} />
 
 <script>
   import { upgradedProps } from "../utils";

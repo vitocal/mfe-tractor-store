@@ -40,5 +40,6 @@
         "global.d.ts",
         "explore",
         "decide",
+        "checkout",
     ]
 }

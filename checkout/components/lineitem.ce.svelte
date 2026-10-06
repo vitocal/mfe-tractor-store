@@ -1,4 +1,4 @@
-<svelte:options customElement={{ tag: "checkout-c-lineitem", shadow: "none" }} />
+<svelte:options customElement={{ tag: "checkout-components-lineitem", shadow: "none" }} />
 
 <script>
   import { removeFromCart } from "../state";

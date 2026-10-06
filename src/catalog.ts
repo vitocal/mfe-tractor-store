@@ -2,13 +2,11 @@ import ds from "./components/catalog";
 
 import { catalog as explore } from "@mfe-tractor/explore";
 import { catalog as decide } from "@mfe-tractor/decide";
-import checkout from "./checkout/catalog";
+import { catalog as checkout } from "@mfe-tractor/checkout";
 
 const vendors = {
     "json-viewer": "https://esm.sh/@alenaksu/json-viewer?standalone"
 }
-
-console.log(checkout);
 
 export const catalog = {
     ...ds,

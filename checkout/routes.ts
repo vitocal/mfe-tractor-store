@@ -3,6 +3,10 @@ import type { Route } from "../src/router.ts";
 /**
  * Checkout team route table.
  *
+ * The dev server (spa fallback) and the shell app all read the routes from
+ * here, so paths and callbacks stay in a single place.
+ * Every route has a `name`, a readable `path` and a `render` callback that
+ * returns the page html.
  */
 export const routes: Route[] = [
     {
@@ -18,9 +22,8 @@ export const routes: Route[] = [
     {
         name: "checkout-thanks",
         path: "/checkout/thanks",
-        render: () => `<checkout-pages-checkout></checkout-pages-checkout>`,
+        render: () => `<checkout-pages-thanks></checkout-pages-thanks>`,
     },
-
 ];
 
 export default routes;

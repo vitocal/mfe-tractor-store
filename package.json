@@ -10,7 +10,8 @@
   },
   "workspaces": [
     "explore",
-    "decide"
+    "decide",
+    "checkout"
   ],
   "dependencies": {
     "ce-autoloader": "^0.2.0-rc",
