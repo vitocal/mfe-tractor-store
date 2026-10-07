@@ -1,6 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
-import { createRibbon } from "./ribbon";
+import type { RenderMode } from "./ribbon";
 import type { Route } from "./router";
 
 // The marker a prerendered page carries, and the route it exposes on a global - both written by
@@ -47,10 +47,13 @@ if (!customElements.get("vi-router")) {
 const stage = document.querySelector("vi-router");
 
 /**
- * Says how the markup on screen was produced - see `./ribbon.ts`. It lives on `<body>`, outside
- * the stage, so re-rendering a route cannot take it with it.
+ * Says how the markup on screen was produced - see `./ribbon.ts`. The ribbon is the shell's own
+ * custom element (`<render-mode>`), carried by `index.html` outside the stage, so re-rendering a
+ * route cannot take it with it. Only the shell knows the mode, so it sets the element's `mode`.
  */
-const showMode = createRibbon(document.body);
+function showMode(mode: RenderMode): void {
+    document.querySelector("render-mode")?.setAttribute("mode", mode);
+}
 
 new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
 
@@ -82,6 +85,8 @@ function paramsFor(pattern: string, path: string): Record<string, string> | null
     return values ? Object.fromEntries(keys.map((key, i) => [key, values[i + 1]])) : null;
 }
 
+// The page is pre-rendered but have queryParams, so it needs to run the route controller()
+// that overwrites the prerendered content.
 if (marker === path && location.search && embeddedRoute) {
     const params = paramsFor(embeddedRoute.path, path);
 
@@ -89,11 +94,12 @@ if (marker === path && location.search && embeddedRoute) {
         const query = new URLSearchParams(location.search);
 
         stage.innerHTML = embeddedRoute.render(params, { name: embeddedRoute.name, path: embeddedRoute.path, params, query });
-        showMode("spa");
+        showMode("client");
     }
 } else if (marker && marker !== path) {
     stage.innerHTML = "<h1>404 Not Found</h1>";
-    showMode("spa");
+    showMode("client");
 } else if (marker === path) {
-    showMode("ssg");
+    // Display the pre-rendered content
+    showMode("server");
 }

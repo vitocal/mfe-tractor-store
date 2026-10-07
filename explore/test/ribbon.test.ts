@@ -4,7 +4,7 @@ import Path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { createRibbon, RIBBON_CLASS } from "../../src/ribbon.ts";
+import { RenderModeRibbon, RIBBON_ATTRIBUTE, RIBBON_TAG } from "../../src/ribbon.ts";
 
 /**
  * The ribbon lives in the shell (`src/ribbon.ts`) and has no test runner of its own, so it is
@@ -12,14 +12,13 @@ import { createRibbon, RIBBON_CLASS } from "../../src/ribbon.ts";
  */
 const ROOT_DIR = Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-/** Mounts a ribbon and returns it with the setter the shell keeps */
-function mount(): { setMode: (mode: "ssg" | "spa") => void; ribbon: HTMLElement } {
-  const setMode = createRibbon(document.body);
-  const ribbon = document.querySelector<HTMLElement>(`.${RIBBON_CLASS}`);
+/** Mounts `<render-mode>` the way `index.html` does, and returns it */
+function mount(): RenderModeRibbon {
+  const ribbon = document.createElement(RIBBON_TAG) as RenderModeRibbon;
 
-  assert.ok(ribbon, "the ribbon is appended to the host");
+  document.body.append(ribbon);
 
-  return { setMode, ribbon };
+  return ribbon;
 }
 
 describe("ribbon", () => {
@@ -27,33 +26,37 @@ describe("ribbon", () => {
     document.body.innerHTML = "";
   });
 
-  describe("createRibbon", () => {
+  describe("the custom element", () => {
+    it("registers the tag the pages carry", () => {
+      assert.equal(customElements.get(RIBBON_TAG), RenderModeRibbon);
+    });
+
     it("says nothing until it is told a mode, so it can not guess", () => {
-      const { ribbon } = mount();
+      const ribbon = mount();
 
       assert.equal(ribbon.textContent, "");
-      assert.equal(ribbon.dataset.mode, undefined);
+      assert.equal(ribbon.getAttribute(RIBBON_ATTRIBUTE), null);
     });
 
     it("shows the mode the shell saw", () => {
-      const { setMode, ribbon } = mount();
+      const ribbon = mount();
 
-      setMode("ssg");
-      assert.equal(ribbon.textContent, "SSG");
-      assert.equal(ribbon.dataset.mode, "ssg");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "server");
+      assert.equal(ribbon.textContent, "server");
+      assert.equal(ribbon.getAttribute(RIBBON_ATTRIBUTE), "server");
 
-      setMode("spa");
-      assert.equal(ribbon.textContent, "SPA");
-      assert.equal(ribbon.dataset.mode, "spa");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "client");
+      assert.equal(ribbon.textContent, "client");
+      assert.equal(ribbon.getAttribute(RIBBON_ATTRIBUTE), "client");
     });
 
-    it("explains what the mode means, since the label is only three letters", () => {
-      const { setMode, ribbon } = mount();
+    it("explains what the mode means, since the label is a single word", () => {
+      const ribbon = mount();
 
-      setMode("ssg");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "server");
       const prerendered = ribbon.title;
 
-      setMode("spa");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "client");
       const browser = ribbon.title;
 
       assert.match(prerendered, /prerendered/);
@@ -62,22 +65,33 @@ describe("ribbon", () => {
     });
 
     it("updates in place, so navigating can not stack ribbons", () => {
-      const { setMode } = mount();
+      const ribbon = mount();
 
-      setMode("ssg");
-      setMode("spa");
-      setMode("ssg");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "server");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "client");
+      ribbon.setAttribute(RIBBON_ATTRIBUTE, "server");
 
-      assert.equal(document.querySelectorAll(`.${RIBBON_CLASS}`).length, 1);
+      assert.equal(document.querySelectorAll(RIBBON_TAG).length, 1);
+    });
+
+    it("reflects the mode through the property the shell reads back", () => {
+      const ribbon = mount();
+
+      ribbon.mode = "client";
+      assert.equal(ribbon.getAttribute(RIBBON_ATTRIBUTE), "client");
+
+      ribbon.mode = null;
+      assert.equal(ribbon.getAttribute(RIBBON_ATTRIBUTE), null);
+      assert.equal(ribbon.textContent, "");
     });
   });
 
   describe("the shell's stylesheet", () => {
-    it("styles the class the ribbon uses, in both modes", () => {
+    it("styles the tag the ribbon uses, in both modes", () => {
       const css = FS.readFileSync(Path.join(ROOT_DIR, "src", "styles.css"), "utf8");
 
-      assert.match(css, new RegExp(`\\.${RIBBON_CLASS}\\s*\\{`));
-      assert.match(css, new RegExp(`\\.${RIBBON_CLASS}\\[data-mode="ssg"\\]`));
+      assert.match(css, new RegExp(`${RIBBON_TAG}\\s*\\{`));
+      assert.match(css, new RegExp(`${RIBBON_TAG}\\[${RIBBON_ATTRIBUTE}="server"\\]`));
     });
   });
 });
