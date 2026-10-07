@@ -31,7 +31,7 @@ import type { Plugin, ResolvedConfig } from "vite";
 import { createRouter } from "../src/router.ts";
 import type { Route } from "../src/router.ts";
 import { tagsIn } from "../src/tags.ts";
-import { markPrerendered } from "./prerendered.ts";
+import { markPrerendered, withRoute, withoutRoute } from "./prerendered.ts";
 import { CE_ORIGIN, ceRenderPages } from "./ce-render.ts";
 import {
   designSystemBuild,
@@ -167,9 +167,9 @@ export async function readShell(shellDir: string = OUTPUT_DIR): Promise<string> 
 
   try {
     // The pass writes the root page over the shell html, so a narrowed run reads a page back
-    // instead of the shell. Drop the block a previous run added, or every page would inherit
-    // the root page's stylesheets on top of its own.
-    const shell = withoutStylesheets(await FS.readFile(file, "utf8"));
+    // instead of the shell. Drop the blocks a previous run added, or every page would inherit
+    // the root page's stylesheets and route on top of its own.
+    const shell = withoutRoute(withoutStylesheets(await FS.readFile(file, "utf8")));
 
     return withExplicitHead(shell);
   } catch {
@@ -235,6 +235,8 @@ export interface Page {
   html: string;
   /** Relative to the output directory, eg `products/classic.html` */
   outputFile: string;
+  /** The route this page was rendered from, embedded into the page for the shell */
+  route: Route;
 }
 
 /** Every page a team's route table wants prerendered */
@@ -258,6 +260,7 @@ export function pagesFor(
         url: CE_ORIGIN + path,
         html: fillStage(template, rendered.html),
         outputFile: outputFileFor(path),
+        route,
       };
     }),
   );
@@ -340,7 +343,7 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
     //
     // The marker is how the shell knows this page already holds its route's markup, so it can
     // leave it alone instead of rendering the same route over it.
-    const marked = markPrerendered(withStylesheets(page, pageStyles), item.path);
+    const marked = markPrerendered(withStylesheets(withRoute(page, item.route), pageStyles), item.path);
     const file = Path.join(outputDirectory, item.outputFile);
 
     // Nothing has written the file yet, so its directory is made here.

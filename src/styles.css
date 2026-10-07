@@ -110,8 +110,6 @@ p {
 .tractor-app {
   width: 100dvw;
   height: 100dvh;
-  display: block;
-  overflow: overlay;
 }
 
 /**
@@ -298,4 +296,3 @@ vi-router {
 .mode-ribbon[data-mode="ssg"] {
   background-color: #ff5a55;
 }
-

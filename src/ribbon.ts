@@ -36,10 +36,15 @@ export const RIBBON_CLASS = "mode-ribbon";
  * navigation, so the ribbon lives outside it, on `<body>`.
  */
 export function createRibbon(host: HTMLElement): (mode: RenderMode) => void {
-  const ribbon = document.createElement("div");
+  // Both shell scripts call this (`app.ts` and `router-app.ts`), so an existing ribbon is reused
+  // rather than a second one appended - otherwise a page would carry two badges.
+  const existing = host.querySelector<HTMLElement>(`.${RIBBON_CLASS}`);
+  const ribbon = existing ?? document.createElement("div");
 
-  ribbon.className = RIBBON_CLASS;
-  host.append(ribbon);
+  if (!existing) {
+    ribbon.className = RIBBON_CLASS;
+    host.append(ribbon);
+  }
 
   return (mode) => {
     const { label, title } = MODES[mode];

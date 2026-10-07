@@ -18,11 +18,10 @@ export const routes: Route[] = [
       const sku = match?.query.get("sku");
 
       // The sku is optional and decides which variant renders, so it is only set when the url
-      // carries one. Attributes are quoted: an unquoted missing value renders the string
-      // "undefined", and the component would then look for a variant with that sku.
-      const attributes = sku ? ` id="${id}" sku="${sku}"` : ` id="${id}"`;
+      // carries one.
+      const attributes = sku ? `id="${id}" sku="${sku}"` : `id="${id}"`;
 
-      return `<decide-pages-product${attributes}></decide-pages-product>`;
+      return `<decide-pages-product ${attributes}></decide-pages-product>`;
     },
   },
 ];

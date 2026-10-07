@@ -10,6 +10,17 @@ const appType = process.env.APP_TYPE === "ssr" ? "custom" : "spa";
 
 export default defineConfig({
   appType,
+  // The full router is a script of its own, present in the SPA build only. `index.html` carries
+  // a `%SPA_ROUTER%` placeholder, which Vite's html env hook fills from this define (keys under
+  // `import.meta.env.` are exposed to `%NAME%` in html). An SSR build replaces it with nothing,
+  // so neither the page nor the SSR bundle carries the router.
+  define: {
+    "import.meta.env.SPA_ROUTER": JSON.stringify(
+      appType === "custom"
+        ? ""
+        : '<script type="module" src="/src/router-app.ts" blocking="render"></script>',
+    ),
+  },
   plugins: [stageTeamAssets(), ssg()],
   build: {
     outDir: "dist/",
