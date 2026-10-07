@@ -62,43 +62,30 @@ The only difference is **when the page markup is produced**. For the longer stor
 mode costs, what bit us building this, and where the trade-offs landed - see
 [POST-MORTEM.md](./POST-MORTEM.md).
 
-|                           | SPA mode                                                      | SSG mode                               |
-| ------------------------- | ------------------------------------------------------------- | -------------------------------------- |
-| Markup is rendered        | in the browser, on every navigation                           | at build time, once per page           |
-| Page html                 | an empty stage: `<vi-router class="tractor-app"></vi-router>` | the components already expanded        |
-| Components are loaded by  | ce-autoloader, in the browser                                 | ce-autoloader, in the browser          |
-| Stylesheets are linked by | the preload helper, with the chunk                            | the prerender, from the build manifest |
-| Good for                  | development                                                   | crawlers and first paint               |
+|                           | SPA mode                                                      | SSG mode                                |
+| ------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| Markup is rendered        | in the browser, on every navigation                           | at build time, once per page            |
+| Page html                 | an empty stage: `<vi-router class="tractor-app"></vi-router>` | the components already expanded         |
+| Components are loaded by  | ce-autoloader, in the browser                                 | ce-autoloader, in the browser           |
+| Stylesheets are linked by | the preload helper, with the chunk                            | the prerender, from the build manifest  |
+| Good for                  | development                                                   | crawlers and first paint                |
 | Run with                  | `npm run dev`                                                 | `npm run build:ssg` + `npm run preview` |
 
 ### Which mode am I looking at?
 
 A ribbon in the bottom right corner says it: black **client** when the shell rendered the route in
 the browser, coral **server** when the page was served prerendered and the shell left the markup
-alone. It follows what you are looking at, not what a build was configured to do: on a built site
-a route that no pass covers is a page the browser rendered, and it says so. So does
-`/checkout/thanks` reached by placing an order - that navigation happens in the browser, through
-`router.navigate` - while the same url typed into the address bar arrives prerendered.
-
-The ribbon is a custom element of the shell's own catalog -
-[`src/components/ribbon.ts`](./src/components/ribbon.ts), registered in
-[`src/catalog.ts`](./src/catalog.ts) and carried
-by [`index.html`](./index.html) on every page, outside the stage, so re-rendering a route cannot
-take it with it. The shell is the only thing that knows the mode, so
-[`src/app.ts`](./src/app.ts) sets the element's `mode` attribute and the element does the rest.
-The prerender never runs the shell's own bootstrap, so the tag ships as a placeholder that the
-browser fills in.
+alone.
 
 ### SPA mode
 
-The shell is the only html document. It boots a [router](./src/router.ts) over the team
-route tables, renders the matched route into `<vi-router>`, and lets
+The shell is the only html document. It boots a local [router-app](./src/router-app.ts) and lets
 [ce-autoloader](./src/app.ts) discover the custom elements in that markup and lazy-load
 them. The markup only exists once the JavaScript has run, which is why this mode is for
 development rather than for crawlers.
 
 Links stay ordinary links, so a navigation is a document navigation: the server answers with
-the same shell and the router renders the route for the new url. That is what the
+the same shell and the local router renders the route for the new url. That is what the
 cross-document view transitions in [index.html](./index.html) are set up for.
 
 ```mermaid
@@ -202,23 +189,19 @@ server can serve them as they are: `/products/classic` is `dist/products/classic
 
 #### Which routes are prerendered
 
-Every team that has a built route table, which today is all three. A team's routes are read
+Every team that has an isomorphic [route file](./explore/routes.ts) , which today is all three. A team's routes are read
 from its `dist/routes.js` and a `:param` is enumerated from its own database:
 
-| Team                        | Route                 | Files                                                         |
-| --------------------------- | --------------------- | ------------------------------------------------------------- |
-| [explore](./explore/)       | `/`                   | `dist/index.html`                                             |
-|                             | `/products`           | `dist/products.html`                                          |
-|                             | `/products/:category` | `dist/products/classic.html`, `dist/products/autonomous.html` |
-|                             | `/stores`             | `dist/stores.html`                                            |
-| [decide](./decide/)         | `/product/:id`        | `dist/product/<id>.html`, one per product                     |
-| [checkout](./checkout/)     | `/checkout/cart`      | `dist/checkout/cart.html`                                     |
-|                             | `/checkout/checkout`  | `dist/checkout/checkout.html`                                 |
-|                             | `/checkout/thanks`    | `dist/checkout/thanks.html`                                   |
-
-A page uses components from more than one team - a checkout page uses explore's header, a
-decide page uses checkout's add to cart - so the render loads every team's catalog. That is
-free: the stylesheet index narrows the result back down per page.
+| Team                    | Route                 | Files                                                         |
+| ----------------------- | --------------------- | ------------------------------------------------------------- |
+| [explore](./explore/)   | `/`                   | `dist/index.html`                                             |
+|                         | `/products`           | `dist/products.html`                                          |
+|                         | `/products/:category` | `dist/products/classic.html`, `dist/products/autonomous.html` |
+|                         | `/stores`             | `dist/stores.html`                                            |
+| [decide](./decide/)     | `/product/:id`        | `dist/product/<id>.html`, one per product                     |
+| [checkout](./checkout/) | `/checkout/cart`      | `dist/checkout/cart.html`                                     |
+|                         | `/checkout/checkout`  | `dist/checkout/checkout.html`                                 |
+|                         | `/checkout/thanks`    | `dist/checkout/thanks.html`                                   |
 
 #### Serving the built site
 
@@ -245,7 +228,7 @@ all - `appType: "spa"` already serves the shell for every route there.
 - The shell build consumes the published team catalogs and routes, so the teams have to be built
   first (`npm run build --workspaces`). `npm run build` builds them for you.
 - The components upgrade the tags the pass left in the document, so the first paint is the
-  prerendered markup. Preact and Vue replace it as they mount; Svelte mounts by *appending*, so
+  prerendered markup. Preact and Vue replace it as they mount; Svelte mounts by _appending_, so
   the checkout team's custom elements clear their host first (`adoptPrerenderedMarkup`) - without
   that, a prerendered page would show the build-time render and then the live one underneath it.
 - A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
@@ -310,11 +293,11 @@ sharing one would be answered with each other's html. That is an error rather th
 Three things have to be rewritten for a render to work at all, and all three are
 happy-dom limitations rather than anything about the app:
 
-| What                                                | Why                                                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `import Default,{named}from"…"`                     | happy-dom's compiler rewrites imports with a regex that needs `import` + whitespace/`{`, so this is left half rewritten and the module never parses |
-| `import.meta.resolve ? … : …`                        | happy-dom can not compile it, and a module that fails to compile does not throw - the render waits for an import that never resolves, until it times out |
-| the preload helper wrapping every catalog loader     | it fetches the component's stylesheet and **waits for it**; a render links styles from the manifest, and a `<link>` it never asked for only delays the components past serialization |
+| What                                             | Why                                                                                                                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `import Default,{named}from"…"`                  | happy-dom's compiler rewrites imports with a regex that needs `import` + whitespace/`{`, so this is left half rewritten and the module never parses                                  |
+| `import.meta.resolve ? … : …`                    | happy-dom can not compile it, and a module that fails to compile does not throw - the render waits for an import that never resolves, until it times out                             |
+| the preload helper wrapping every catalog loader | it fetches the component's stylesheet and **waits for it**; a render links styles from the manifest, and a `<link>` it never asked for only delays the components past serialization |
 
 Only the render sees the rewritten modules - the files on disk are untouched. See
 `renderable()` in [ce-render.ts](./scripts/ce-render.ts).
@@ -354,7 +337,7 @@ pass writes the root page over the shell html, so on a rerun its input is its ow
 marker is what lets it drop the block a previous run added, instead of stacking a second copy
 and leaking the root page's stylesheets into every other page.
 
-This is only about styles that are *already in the document*. Everything the browser still
+This is only about styles that are _already in the document_. Everything the browser still
 loads lazily keeps the SPA guarantee, because the preload helper fetches a component's css
 before it defines the element. The mini-cart's placeholder is in the prerendered markup, so
 its stylesheet is linked; `<ds-button>`, which the mini-cart only renders once it is upgraded,
@@ -377,20 +360,20 @@ cd checkout && npm test
 The script builds the team, then renders **every page it publishes** through
 [`ceRenderToString`](./scripts/ce-render.ts) - the very function the SSG renders with, over the
 same built catalog and build manifest. That is the assertion worth making: a page that renders
-here is a page that renders at build time. The pages come from the *built catalog* rather than a
+here is a page that renders at build time. The pages come from the _built catalog_ rather than a
 list, so a page added to `pages/` is covered the moment it is built, and one that stops
 rendering fails here, naming itself, instead of at build time.
 
 That contract lives in one place, [`scripts/team-render.ts`](./scripts/team-render.ts): a team's
-[`test/render.ts`](./checkout/test/render.ts) is one line binding the *preset* for its build, and
+[`test/render.ts`](./checkout/test/render.ts) is one line binding the _preset_ for its build, and
 its [`test/pages.test.ts`](./checkout/test/pages.test.ts) hands that preset to `describePages`.
 Every team's pages are held to the same two properties, so a page that renders once for checkout
 renders once for decide, and the tests that prove it cannot drift apart. The teams come from the
 SSG's own table ([`scripts/ssg-teams.ts`](./scripts/ssg-teams.ts)), which is why a team added
-there is a team the pass writes pages for *and* a team the suite renders.
+there is a team the pass writes pages for _and_ a team the suite renders.
 
 The second property is that a page renders **once**, even when it arrives with the markup a
-prerendered page carries. Svelte mounts by *appending*, so without `adoptPrerenderedMarkup` a
+prerendered page carries. Svelte mounts by _appending_, so without `adoptPrerenderedMarkup` a
 prerendered checkout page showed the build-time render with the live one underneath - Preact and
 Vue replace on their own. Take the `extend` off a checkout element and that test fails, which is
 the whole point of it.
@@ -441,8 +424,7 @@ measures it, along with overlapping calls:
                  3 calls, that team's build only: 170.5ms (5.50ms a page, 3.99x)
 ```
 
-The second line is the honest comparison - the same 31 pages, the same output, one call instead of
-93. The third is cheaper because it does *less*: a batch given one team's build renders another
+The second line is the honest comparison - the same 31 pages, the same output, one call instead of 93. The third is cheaper because it does _less_: a batch given one team's build renders another
 team's tags as placeholders, the way the page tests do.
 
 The numbers above are from an 8 core laptop, and the shape of them is what to read rather than the
