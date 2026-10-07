@@ -341,16 +341,22 @@ export interface CeRenderOptions {
   timeout?: number;
   /** Prints what the render is waiting for, which is how to tell a slow render from a stuck one */
   debug?: boolean;
+  /**
+   * Link the stylesheets the expanded tags need. Defaults to true. A caller that resolves the
+   * stylesheets itself - the prerender does, because the shell's design system is not a catalog
+   * tag - turns it off.
+   */
+  styles?: boolean;
 }
 
 /** A build the pages of a batch render through */
 export interface CeRenderBuild {
   /** The url the build's catalog is served under, eg `/explore/dist/catalog.js` */
   catalogUrl: string;
-  /** The build's catalog: tag -> loader, the same file the browser loads */
-  catalog: Catalog;
-  /** What the build emitted, and which stylesheet each module was compiled into */
-  manifest: Manifest;
+  /** The build's catalog: tag -> loader, the same file the browser loads. Read only to link styles. */
+  catalog?: Catalog;
+  /** What the build emitted, and which stylesheet each module was compiled into. Read only to link styles. */
+  manifest?: Manifest;
 }
 
 /** One page of a batch */
@@ -376,6 +382,11 @@ export interface CeRenderPagesOptions {
   timeout?: number;
   /** Prints what the render is waiting for, which is how to tell a slow render from a stuck one */
   debug?: boolean;
+  /**
+   * Link the stylesheets each page's components need. Defaults to true. A caller that resolves
+   * the stylesheets itself - the prerender does, for the shell's design system - turns it off.
+   */
+  styles?: boolean;
 }
 
 /** The url a page is rendered for: it is served at the origin's root unless it says otherwise */
@@ -398,6 +409,9 @@ function stylesForBuilds(html: string, builds: CeRenderBuild[]): string[] {
   const urls = new Set<string>();
 
   for (const build of builds) {
+    // A build with no catalog or manifest has no styles to resolve; the caller links them.
+    if (!build.catalog || !build.manifest) continue;
+
     for (const url of stylesFor(html, build.manifest, build.catalog)) urls.add(url);
   }
 
@@ -429,7 +443,7 @@ export async function ceRenderPages(
   pages: CeRenderPage[],
   options: CeRenderPagesOptions,
 ): Promise<string[]> {
-  const { builds, timeout = 30000 } = options;
+  const { builds, timeout = 30000, styles = true } = options;
 
   if (!builds.length) {
     throw new Error(
@@ -492,7 +506,7 @@ export async function ceRenderPages(
 
     if (failed) throw new Error(`Could not load the components for ${url}: ${failed}`);
 
-    return withStylesheets(rendered, stylesForBuilds(rendered, builds));
+    return styles ? withStylesheets(rendered, stylesForBuilds(rendered, builds)) : rendered;
   });
 }
 
@@ -530,6 +544,7 @@ export async function ceRenderToString(
     code: options.code,
     timeout: options.timeout,
     debug: options.debug,
+    styles: options.styles,
   });
 
   return rendered;

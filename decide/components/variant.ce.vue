@@ -40,8 +40,4 @@ const isSelected = computed(() => {
   return typeof props.selected === "string" ? props.selected == "true" : props.selected;
 });
 
-// const vi_router = document.querySelector("vi-router");
-// const pages_product_url = computed(() => {
-//   return `/product/${props.id}`
-// });
 </script>

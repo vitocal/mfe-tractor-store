@@ -44,9 +44,10 @@ Open `http://localhost:5173` in your browser.
 | Command               | What it does                                                       |
 | --------------------- | ------------------------------------------------------------------ |
 | `npm run dev`         | Dev server (source modules, hot reload) on `http://localhost:5173` |
-| `npm run ssg`         | Build the teams and the shell, then prerender the pages            |
+| `npm run build`       | Build the teams and the shell - the SPA                            |
+| `npm run build:ssg`   | The same with `APP_TYPE=ssr`: prerender every page too             |
 | `npm run preview`     | Serve the built output on `http://localhost:4173`                  |
-| `npm run preview:ssg` | `npm run ssg` followed by `npm run preview`                        |
+| `npm run preview:ssg` | `npm run build:ssg` followed by `npm run preview`                  |
 
 `npm run dev` always renders the SPA. To look at the prerendered output, build it and serve it:
 
@@ -68,7 +69,7 @@ mode costs, what bit us building this, and where the trade-offs landed - see
 | Components are loaded by  | ce-autoloader, in the browser                                 | ce-autoloader, in the browser          |
 | Stylesheets are linked by | the preload helper, with the chunk                            | the prerender, from the build manifest |
 | Good for                  | development                                                   | crawlers and first paint               |
-| Run with                  | `npm run dev`                                                 | `npm run ssg` + `npm run preview`      |
+| Run with                  | `npm run dev`                                                 | `npm run build:ssg` + `npm run preview` |
 
 ### Which mode am I looking at?
 
@@ -129,8 +130,10 @@ sequenceDiagram
 
 ### SSG mode
 
-[`scripts/ssg.ts`](./scripts/ssg.ts) walks the same route tables, and for every concrete
-route renders the page into the built shell html and writes the result to disk:
+[`scripts/ssg.ts`](./scripts/ssg.ts) is a Vite plugin now: in `closeBundle` it walks the same
+route tables, and for every concrete route renders the page into the built shell html and writes
+the result to disk. Vite's `appType` decides whether it runs at all - `npm run build:ssg` sets
+`APP_TYPE=ssr` for `appType: "custom"`, and the plain `npm run build` leaves it at `"spa"`.
 
 ```
 <vi-router class="tractor-app"></vi-router>
@@ -138,22 +141,23 @@ route renders the page into the built shell html and writes the result to disk:
     -> <vi-router class="tractor-app"><explore-pages-home><main>…</main></explore-pages-home></vi-router>
 ```
 
-The expansion is done by [Happy DOM's ServerRenderer](https://github.com/capricorn86/happy-dom/wiki/Server-Renderer):
-it loads the **built** team components - the very chunks the browser loads - lets them
-upgrade and render, and serializes the resulting document. No browser and no hand written
-templates, so the files can not drift from the app.
+The expansion is the render a server answers with - `ceRenderPages`, the batch form of
+[`ceRenderToString`](./scripts/ce-render.ts): it loads the **built** team components (the very
+chunks the browser loads) through [Happy DOM's ServerRenderer](https://github.com/capricorn86/happy-dom/wiki/Server-Renderer),
+lets them upgrade and render, and serializes the resulting document. No browser and no hand
+written templates, so the files can not drift from the app.
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant C as npm run ssg
-  participant G as scripts/ssg.ts
+  participant C as npm run build:ssg
+  participant G as scripts/ssg.ts (vite plugin)
   participant P as Happy DOM page
   participant I as fetch interceptor
   participant K as Built chunks
   participant D as dist/
 
-  C->>G: build the teams and the shell, then prerender
+  C->>G: build the teams and the shell, then closeBundle prerenders
   G->>G: read dist/routes.js and dist/index.html
   G->>G: expand route params into concrete paths
   G->>G: fillStage, the route markup goes inside vi-router
@@ -170,44 +174,43 @@ sequenceDiagram
     Note over P: the tags are defined, so they upgrade on insert
     P->>P: waitUntilComplete
     P->>G: serializeToString of the document
-    G->>D: write path/index.html
+    G->>D: write path.html
   end
 ```
 
 ```bash
-npm run ssg
+npm run build:ssg
 ```
 
 ```
-[ssg] prerendering explore, decide, checkout
-[ssg] + / -> dist/index.html (7.7 kB, 4 css)
-[ssg] + /products -> dist/products/index.html (14.9 kB, 5 css)
-[ssg] + /products/classic -> dist/products/classic/index.html (11.1 kB, 5 css)
-[ssg] + /stores -> dist/stores/index.html (5.2 kB, 4 css)
-[ssg] + /product/AU-01 -> dist/product/AU-01/index.html (8.8 kB, 8 css)
-[ssg] + /checkout/cart -> dist/checkout/cart/index.html (7.2 kB, 5 css)
+[ssg] + / -> dist/index.html (7.5 kB, 6 css)
+[ssg] + /products -> dist/products.html (15.9 kB, 5 css)
+[ssg] + /products/classic -> dist/products/classic.html (12.1 kB, 5 css)
+[ssg] + /stores -> dist/stores.html (6.1 kB, 5 css)
+[ssg] + /product/AU-01 -> dist/product/AU-01.html (8.6 kB, 8 css)
+[ssg] + /checkout/cart -> dist/checkout/cart.html (7.1 kB, 6 css)
 …
 [ssg] done, 31 pages written to dist
 ```
 
-Pages are written next to the shell build, path for path, so a static server can serve them
-as they are: `/products/classic` is `dist/products/classic/index.html`.
+Pages are written next to the shell build, one html file per route, named after it, so a static
+server can serve them as they are: `/products/classic` is `dist/products/classic.html`.
 
 #### Which routes are prerendered
 
 Every team that has a built route table, which today is all three. A team's routes are read
 from its `dist/routes.js` and a `:param` is enumerated from its own database:
 
-| Team                        | Route                 | Files                                                                     |
-| --------------------------- | --------------------- | ------------------------------------------------------------------------- |
-| [explore](./explore/)       | `/`                   | `dist/index.html`                                                         |
-|                             | `/products`           | `dist/products/index.html`                                                |
-|                             | `/products/:category` | `dist/products/classic/index.html`, `dist/products/autonomous/index.html` |
-|                             | `/stores`             | `dist/stores/index.html`                                                  |
-| [decide](./decide/)         | `/product/:id`        | `dist/product/<id>/index.html`, one per product                           |
-| [checkout](./checkout/)     | `/checkout/cart`      | `dist/checkout/cart/index.html`                                           |
-|                             | `/checkout/checkout`  | `dist/checkout/checkout/index.html`                                       |
-|                             | `/checkout/thanks`    | `dist/checkout/thanks/index.html`                                         |
+| Team                        | Route                 | Files                                                         |
+| --------------------------- | --------------------- | ------------------------------------------------------------- |
+| [explore](./explore/)       | `/`                   | `dist/index.html`                                             |
+|                             | `/products`           | `dist/products.html`                                          |
+|                             | `/products/:category` | `dist/products/classic.html`, `dist/products/autonomous.html` |
+|                             | `/stores`             | `dist/stores.html`                                            |
+| [decide](./decide/)         | `/product/:id`        | `dist/product/<id>.html`, one per product                     |
+| [checkout](./checkout/)     | `/checkout/cart`      | `dist/checkout/cart.html`                                     |
+|                             | `/checkout/checkout`  | `dist/checkout/checkout.html`                                 |
+|                             | `/checkout/thanks`    | `dist/checkout/thanks.html`                                   |
 
 A page uses components from more than one team - a checkout page uses explore's header, a
 decide page uses checkout's add to cart - so the render loads every team's catalog. That is
@@ -215,24 +218,28 @@ free: the stylesheet index narrows the result back down per page.
 
 #### Serving the built site
 
-`npm run preview` serves `dist/` the way a static host has to, so both kinds of page work:
+The pages are written one html file per route, named after the route - `/products` is
+`dist/products.html`, `/product/AU-01` is `dist/product/AU-01.html` - which is the shape a static
+host serves with:
 
 ```
-try_files $uri $uri/index.html /index.html
+try_files $uri $uri.html /index.html
 ```
 
-- a prerendered page is served for its directory (`/products` -> `products/index.html`)
+- a prerendered page is served for its route (`/products` -> `products.html`)
 - any other route gets the shell, so it can render client-side (`/product/AU-03`)
 
-`vite preview` on its own does not do the first one, which is why `/products` - the url the
-navigation actually links to - needs this.
+Vite's own preview fallback (`appType: "spa"`) does both, which is why there is no preview plugin:
+it resolves `foo.html` for `foo`, and answers anything else with the shell. Dev needs nothing at
+all - `appType: "spa"` already serves the shell for every route there.
 
 #### Notes
 
-- `npm run build` empties `dist/`, so the prerender has to run after it. `npm run ssg` does
-  both. `npm run preview` warns when `dist/` has no prerendered page.
-- The shell build consumes the published team catalogs and routes, so the teams have to be
-  built first (`npm run build --workspaces`). `npm run ssg` builds them for you.
+- `npm run build` empties `dist/`, so the prerender has to run after it - it does, as the build's
+  own `closeBundle` hook, which is why `npm run build:ssg` is a single command. `npm run preview`
+  warns when `dist/` has no prerendered page.
+- The shell build consumes the published team catalogs and routes, so the teams have to be built
+  first (`npm run build --workspaces`). `npm run build` builds them for you.
 - The components upgrade the tags the pass left in the document, so the first paint is the
   prerendered markup. Preact and Vue replace it as they mount; Svelte mounts by *appending*, so
   the checkout team's custom elements clear their host first (`adoptPrerenderedMarkup`) - without
@@ -243,11 +250,11 @@ navigation actually links to - needs this.
   the browser.
 - `npm test -w explore` runs the component tests, which render the built components in
   [Happy DOM](./explore/test/happy-dom-env.ts) - the same way the SSG pass does.
-- `CE_RENDER_TRACE=1 npm run ssg` logs every asset the render asks for, and `SSG_TRACE=1`
+- `CE_RENDER_TRACE=1 npm run build:ssg` logs every asset the render asks for, and `SSG_TRACE=1`
   traces what it is waiting for. Between them, a page that renders wrong is usually obvious.
-- `--team <name>` narrows a run to one team (`npm run ssg -w explore`). A full run is the one
-  to use: the pass reads the shell html, and a narrowed run may be reading a page a previous
-  pass wrote over it.
+- The pass reads the shell html, so it writes the root page over it: a run that did not empty
+  `dist/` first would read a page back. `npm run build` empties it, which is what makes the
+  single command safe.
 
 ### Rendering without a browser
 

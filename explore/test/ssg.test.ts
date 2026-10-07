@@ -55,9 +55,9 @@ describe("ssg", () => {
       assert.equal(outputFileFor("/"), "index.html");
     });
 
-    it("mirrors the route path into nested directories", () => {
-      assert.equal(outputFileFor("/products"), "products/index.html");
-      assert.equal(outputFileFor("/products/classic"), "products/classic/index.html");
+    it("names the file after the route, the shape Vite's preview serves", () => {
+      assert.equal(outputFileFor("/products"), "products.html");
+      assert.equal(outputFileFor("/products/classic"), "products/classic.html");
     });
   });
 

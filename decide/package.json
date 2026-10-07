@@ -17,8 +17,7 @@
     "dev": "vite",
     "build": "vite build",
     "watch": "vite build --watch",
-    "test": "npm run build && node --test ./pages/*.test.ts ./test/*.test.ts",
-    "ssg": "node ../scripts/ssg.ts --team decide"
+    "test": "npm run build && node --test ./pages/*.test.ts ./test/*.test.ts"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.9",

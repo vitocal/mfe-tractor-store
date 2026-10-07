@@ -307,7 +307,7 @@ npm run preview:ssg
 To see the first paint as the browser sees it, park the shell's javascript
 (`mv dist/index.js /tmp/`) and read computed styles at `DOMContentLoaded` - that is pure html
 and css, which is what render-blocking stylesheets actually guarantee. To watch the pass work,
-`CE_RENDER_TRACE=1 npm run ssg` logs every asset the render asks for, and `SSG_TRACE=1` traces
+`CE_RENDER_TRACE=1 npm run build:ssg` logs every asset the render asks for, and `SSG_TRACE=1` traces
 what it is waiting for. To isolate one component,
 [`ceRenderToString`](./scripts/ce-render.ts) renders a single html string through the same
 machinery the pass uses.

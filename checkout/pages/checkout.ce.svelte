@@ -12,8 +12,6 @@
   let storeId = "";
   let isFormValid = "";
 
-  let vi_router = document.querySelector("vi-router");
-
   const validateForm = () => {
     // Check HTML5 validity of inputs + ensure storeId is present
     isFormValid = Boolean(formElement?.checkValidity()) && storeId !== "";
@@ -26,7 +24,7 @@
 
     if (validateForm()) {
       await placeOrder();
-      vi_router.router.navigate("/checkout/thanks");
+      window.location = "/checkout/thanks";
     }
   }
 

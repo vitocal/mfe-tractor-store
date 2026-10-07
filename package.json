@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build --workspaces && vite build",
+    "build:ssg": "APP_TYPE=ssr npm run build",
     "preview": "vite preview",
-    "ssg": "npm run build --workspaces && npm run build && node scripts/ssg.ts",
-    "bench": "npm run build --workspaces && npm run build && node scripts/bench-render.ts",
-    "test": "npm test --workspaces",
-    "preview:ssg": "npm run ssg && vite preview"
+    "preview:ssg": "npm run build:ssg && vite preview",
+    "bench": "npm run build && node scripts/bench-render.ts",
+    "test": "npm test --workspaces"
   },
   "workspaces": [
     "explore",

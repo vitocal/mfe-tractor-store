@@ -1,5 +1,5 @@
 /**
- * Static site generation for every team that has a route table.
+ * Static site generation, as a Vite plugin.
  *
  * Renders each team's routes into real html files where the page components are already
  * expanded, so crawlers - and the first paint - get the full markup instead of an empty stage:
@@ -7,40 +7,32 @@
  *     <vi-router></vi-router>
  *         ->  <vi-router><explore-pages-home><main>…</main></explore-pages-home></vi-router>
  *
- * The expansion is done by Happy DOM's ServerRenderer: it loads the built shell html, puts the
- * route markup inside `<vi-router>`, loads the *built* team components (the very chunks the
- * browser loads) and serializes the resulting document. There is no browser and no hand written
- * template, so the files can not drift from the app - whatever the components render in a
- * browser is what lands in the file.
+ * The expansion is the render a server would answer with: the built shell is read, each route's
+ * markup is put inside `<vi-router>`, and the *built* team components - the very chunks the
+ * browser loads - are run through Happy DOM and serialized. There is no browser and no hand
+ * written template, so the files can not drift from the app.
  *
- * Every team is rendered in one run, from one read of the shell, because the run overwrites the
- * shell's own `dist/index.html` with the root page: a later pass reading it back would be
- * reading a page, not the shell. `--team <name>` narrows a run down, and the marker and the
- * style block survive that, but the plain run is the one to use.
+ * It runs as a Vite plugin, in `closeBundle`, so a single `vite build` writes the pages. Which
+ * site that build produces comes from Vite's `appType`: `custom` means the build answers its own
+ * html and this pass runs, `spa` means the browser renders every route and it does not - see
+ * `vite.config.js`. `npm run build` is the SPA, `npm run build:ssg` is the prerendered site.
  *
- * Run with `npm run ssg`, after `npm run build --workspaces` and `npm run build`. Pages are
- * written next to the shell build so a static server can serve them as-is; `--out <dir>` writes
- * them somewhere else.
+ * The render itself is the project's own dog food: `ceRenderPages` (the batch form of
+ * `ceRenderToString`) expands the tags, and `component-styles.ts` links the stylesheets a page
+ * needs. All this pass decides is *which* pages to write and *where*.
  */
 
 import FS from "node:fs/promises";
 import Path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { ServerRenderer, ServerRendererLogLevelEnum } from "@happy-dom/server-renderer";
+import type { Plugin, ResolvedConfig } from "vite";
 
 import { createRouter } from "../src/router.ts";
 import type { Route } from "../src/router.ts";
 import { tagsIn } from "../src/tags.ts";
 import { markPrerendered } from "./prerendered.ts";
-import {
-  CE_ORIGIN,
-  ceBrowserSettings,
-  ceSetupScript,
-  createAssetResponder,
-  renderError,
-} from "./ce-render.ts";
-import type { CeAssetState } from "./ce-render.ts";
+import { CE_ORIGIN, ceRenderPages } from "./ce-render.ts";
 import {
   designSystemBuild,
   stylesByTag,
@@ -58,18 +50,15 @@ import type { Team } from "./ssg-teams.ts";
 
 const ROOT_DIR = Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** The built shell, the page every route starts from */
-const SHELL_HTML = Path.join(ROOT_DIR, "dist", "index.html");
-
-/** Where the pages are written by default */
+/** Where the shell build writes, and where the pages are written next to it */
 const OUTPUT_DIR = Path.join(ROOT_DIR, "dist");
 
 /** Directories the render may read assets from, tried in order */
-const STATIC_ROOTS = [ROOT_DIR, Path.join(ROOT_DIR, "public"), Path.join(ROOT_DIR, "dist")];
+const STATIC_ROOTS = [ROOT_DIR, Path.join(ROOT_DIR, "public"), OUTPUT_DIR];
 
-/** Where a build wrote its manifest */
-function manifestFile(dir: string): string {
-  return Path.join(dir, "dist", ".vite", "manifest.json");
+/** The directory a team's build wrote, where its manifest and route table live */
+function teamDist(team: Team): string {
+  return Path.join(ROOT_DIR, team.name, "dist");
 }
 
 /* -------------------------------------------------------------- route table -- */
@@ -93,10 +82,17 @@ export function pathsFor(route: Route, params: Record<string, string[]> = {}): s
   );
 }
 
-/** `/products/classic` -> `products/classic/index.html`, `/` -> `index.html` */
+/**
+ * `/products/classic` -> `products/classic.html`, `/` -> `index.html`.
+ *
+ * A route becomes one html file named after it, rather than a `products/classic/index.html`
+ * directory index. That is the shape Vite's own preview fallback already serves for a url that
+ * does not end in `/` (`try_files $uri $uri.html /index.html`), which is why preview needs no
+ * plugin of its own.
+ */
 export function outputFileFor(path: string): string {
   const clean = path.replace(/^\/+|\/+$/g, "");
-  return clean ? `${clean}/index.html` : "index.html";
+  return clean ? `${clean}.html` : "index.html";
 }
 
 /* ------------------------------------------------------------------ template -- */
@@ -116,17 +112,11 @@ export function fillStage(template: string, html: string): string {
   return template.replace(/(<vi-router[^>]*>)[\s\S]*?(<\/vi-router>)/, `$1${html}$2`);
 }
 
-/* -------------------------------------------------------------------- render -- */
-
-/* The render itself lives in `ce-render.ts`: it is the same machinery a server needs to
- * answer with html, and the pass is one caller of it. What stays here is what is specific to
- * prerendering a site - the route tables, the pages to write, and the stylesheets to link. */
-
 /* --------------------------------------------------------------- build data -- */
 
 /** The manifest a build wrote: every module it emitted, with the stylesheet it needs */
-async function readManifest(dir: string, build: string): Promise<Manifest> {
-  const file = manifestFile(dir);
+async function readManifest(distDir: string, build: string): Promise<Manifest> {
+  const file = Path.join(distDir, ".vite", "manifest.json");
 
   try {
     return JSON.parse(await FS.readFile(file, "utf8"));
@@ -147,11 +137,11 @@ async function readManifest(dir: string, build: string): Promise<Manifest> {
  * `<ds-button>` keeps its placeholder in the prerendered markup and the browser fills it in.
  * Its stylesheet is linked all the same, so that placeholder is styled while it waits.
  */
-async function readStyleIndex(): Promise<Map<string, string[]>> {
-  const builds: ComponentBuild[] = [designSystemBuild(await readManifest(ROOT_DIR, "shell"))];
+async function readStyleIndex(shellDir: string): Promise<Map<string, string[]>> {
+  const builds: ComponentBuild[] = [designSystemBuild(await readManifest(shellDir, "shell"))];
 
   for (const team of TEAMS) {
-    const manifest = await readManifest(Path.join(ROOT_DIR, team.name), team.name);
+    const manifest = await readManifest(teamDist(team), team.name);
 
     builds.push(teamBuild(team.name, team.extension, manifest));
   }
@@ -171,33 +161,27 @@ function codeUrls(teams: readonly Team[]): string[] {
   ]);
 }
 
-/**
- * The catalogs the render loads components through: a team publishes its catalog as its main
- * entry, and `catalog.ts` is what turns a team's modules into custom elements.
- */
-function catalogUrls(teams: readonly Team[]): string[] {
-  return teams.map((team) => `/${team.name}/dist/catalog.js`);
-}
-
 /** The built shell, the page every route starts from */
-export async function readShell(): Promise<string> {
+export async function readShell(shellDir: string = OUTPUT_DIR): Promise<string> {
+  const file = Path.join(shellDir, "index.html");
+
   try {
     // The pass writes the root page over the shell html, so a narrowed run reads a page back
     // instead of the shell. Drop the block a previous run added, or every page would inherit
     // the root page's stylesheets on top of its own.
-    const shell = withoutStylesheets(await FS.readFile(SHELL_HTML, "utf8"));
+    const shell = withoutStylesheets(await FS.readFile(file, "utf8"));
 
     return withExplicitHead(shell);
   } catch {
     throw new Error(
-      `The built shell is missing (${Path.relative(ROOT_DIR, SHELL_HTML)}). Run "npm run build" first.`,
+      `The built shell is missing (${Path.relative(ROOT_DIR, file)}). Run "npm run build" first.`,
     );
   }
 }
 
 /** The built route table of a team */
 export async function readRoutes(team: Team): Promise<Route[]> {
-  const file = Path.join(ROOT_DIR, team.name, "dist", "routes.js");
+  const file = Path.join(teamDist(team), "routes.js");
 
   try {
     const module = (await import(pathToFileURL(file).href)) as { default: Route[] };
@@ -224,16 +208,12 @@ export interface SsgPage {
   outputFile: string;
   /** Stylesheets linked into the page, in the order they were written */
   styles: string[];
-  /** Errors the page reported while rendering, eg a third party import the render can not load */
-  errors: string[];
   /** Size of the written file in bytes */
   bytes: number;
 }
 
 export interface SsgResult {
   pages: SsgPage[];
-  /** Assets the render asked for that no static root could provide */
-  missing: string[];
   /** Components a page used that their build declares no stylesheet for */
   unstyled: string[];
   /** Directory the pages were written to */
@@ -243,16 +223,17 @@ export interface SsgResult {
 export interface SsgOptions {
   /** The teams to render, all of them by default */
   teams?: string[];
-  /** Where the pages are written, defaults to the shell build (`dist/`) */
+  /** Where the pages are written, and the built shell they start from. Defaults to `dist/` */
   outputDirectory?: string;
 }
 
-/** A page to render: which team it belongs to, and what to write where */
+/** A page to render: which team it belongs to, and where its file goes under the output directory */
 export interface Page {
   team: string;
   path: string;
   url: string;
   html: string;
+  /** Relative to the output directory, eg `products/classic.html` */
   outputFile: string;
 }
 
@@ -296,8 +277,8 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
 
   if (!teams.length) throw new Error(`No team to prerender: ${wanted.join(", ") || "none named"}`);
 
-  const template = await readShell();
-  const styles = await readStyleIndex();
+  const template = await readShell(outputDirectory);
+  const styles = await readStyleIndex(outputDirectory);
   const items: Page[] = [];
 
   for (const team of teams) {
@@ -313,68 +294,37 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
     }
   }
 
-  const state: CeAssetState = {
-    code: codeUrls(teams),
-    roots: STATIC_ROOTS,
-    missing: new Set<string>(),
-  };
-  const unstyledTags = new Set<string>();
+  // The render is the project's own dog food: `ceRenderPages` is `ceRenderToString` for a batch
+  // - one window, every team's catalog, one page at a time. The stylesheets are linked here
+  // instead, because the shell's design system is not a catalog tag and only `component-styles`
+  // can name it - so the render is asked not to link any.
+  const rendered = await ceRenderPages(
+    items.map(({ url, html }) => ({ url, html })),
+    {
+      builds: teams.map((team) => ({ catalogUrl: `/${team.name}/dist/catalog.js` })),
+      roots: STATIC_ROOTS,
+      code: codeUrls(teams),
+      styles: false,
+      // `SSG_TRACE=1` prints what a render is waiting for, which is how to tell a slow page from
+      // one that will never settle.
+      debug: process.env.SSG_TRACE === "1",
+    },
+  );
 
-  const renderer = new ServerRenderer({
-    logLevel: ServerRendererLogLevelEnum.error,
-    outputDirectory,
-    // `SSG_TRACE=1` prints what a render is waiting for, which is how to tell a slow page from
-    // one that will never settle.
-    debug: process.env.SSG_TRACE === "1",
-    // A worker receives its configuration through structured cloning, which can not carry the
-    // fetch interceptor (a function), so the render runs in this process.
-    worker: { disable: true },
-    // One page at a time: they share a browser, and a failure stays attributable.
-    render: { maxConcurrency: 1, setupScript: ceSetupScript(catalogUrls(teams)) },
-    browser: ceBrowserSettings(createAssetResponder(state)),
-  });
-
-  let results;
-
-  try {
-    results = await renderer.render(items);
-  } finally {
-    await renderer.close();
-  }
-
-  const itemsByUrl = new Map(items.map((item) => [item.url, item]));
   const prefixes = teams.map(({ name }) => name);
+  const unstyledTags = new Set<string>();
   const pages: SsgPage[] = [];
 
-  for (const result of results) {
-    const item = itemsByUrl.get(result.url ?? "");
-
-    if (!item) throw new Error(`The renderer returned a page nobody asked for: ${result.url}`);
-    if (result.error) {
-      const missing = [...state.missing].sort();
-      const assets = missing.length
-        ? `\nAssets no static root could provide: ${missing.join(", ")}`
-        : "";
-
-      throw new Error(`${item.path} failed to render: ${result.error}${assets}`);
-    }
-    if (!result.outputFile) throw new Error(`${item.path} produced no output file`);
-
-    const written = await FS.readFile(result.outputFile, "utf8");
+  for (const [index, item] of items.entries()) {
+    const page = rendered[index];
 
     // A stage that is still empty means a component did not upgrade - exactly the failure this
     // pass exists to avoid, so it is reported instead of written silently.
-    if (/<vi-router[^>]*>\s*<\/vi-router>/.test(written)) {
+    if (/<vi-router[^>]*>\s*<\/vi-router>/.test(page)) {
       throw new Error(`${item.path} rendered an empty stage, no component was upgraded`);
     }
 
-    // The setup script stamps this on the document when it can not load a component. Without
-    // the check the page would be written with placeholders where its content should be.
-    const failed = renderError(written);
-
-    if (failed) throw new Error(`${item.path} could not load its components: ${failed}`);
-
-    const tags = tagsIn(written);
+    const tags = tagsIn(page);
     const undeclared = unknownTags(styles, tags, prefixes);
 
     if (undeclared.length) {
@@ -390,85 +340,74 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
     //
     // The marker is how the shell knows this page already holds its route's markup, so it can
     // leave it alone instead of rendering the same route over it.
-    const page = markPrerendered(withStylesheets(written, pageStyles), item.path);
+    const marked = markPrerendered(withStylesheets(page, pageStyles), item.path);
+    const file = Path.join(outputDirectory, item.outputFile);
 
-    if (page !== written) await FS.writeFile(result.outputFile, page);
+    // Nothing has written the file yet, so its directory is made here.
+    await FS.mkdir(Path.dirname(file), { recursive: true });
+    await FS.writeFile(file, marked);
 
     pages.push({
       team: item.team,
       path: item.path,
-      url: result.url ?? "",
-      outputFile: result.outputFile,
+      url: item.url,
+      outputFile: file,
       styles: pageStyles,
-      errors: result.pageErrors ?? [],
-      bytes: page.length,
+      bytes: marked.length,
     });
   }
 
-  return {
-    pages,
-    missing: [...state.missing].sort(),
-    unstyled: [...unstyledTags].sort(),
-    outputDirectory,
-  };
+  return { pages, unstyled: [...unstyledTags].sort(), outputDirectory };
 }
 
-/* ---------------------------------------------------------------------- cli -- */
+/* ------------------------------------------------------------------- plugin -- */
 
-/** The teams named by `--team <name>`, if any */
-function requestedTeams(args: string[]): string[] {
-  const teams: string[] = [];
-
-  for (const [index, arg] of args.entries()) {
-    if (arg === "--team" && args[index + 1]) teams.push(args[index + 1]);
-  }
-
-  return teams;
-}
-
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const outIndex = args.indexOf("--out");
-  const outputDirectory =
-    outIndex === -1 ? undefined : Path.resolve(process.cwd(), args[outIndex + 1] ?? "");
-
-  const teams = requestedTeams(args);
-  const names = teams.length ? teams : TEAMS.map(({ name }) => name);
-
-  console.log(`[ssg] prerendering ${names.join(", ")}`);
-
-  const { pages, missing, unstyled, outputDirectory: out } = await generate({ teams, outputDirectory });
-
+/** Prints what the pass wrote */
+function report({ pages, unstyled, outputDirectory }: SsgResult, root: string): void {
   for (const page of pages) {
-    const file = Path.relative(ROOT_DIR, page.outputFile);
+    const file = Path.relative(root, page.outputFile);
     const css = `${page.styles.length} css`;
 
     console.log(`[ssg] + ${page.path} -> ${file} (${(page.bytes / 1024).toFixed(1)} kB, ${css})`);
-
-    // A page may throw after its markup is rendered - the thanks page imports canvas-confetti
-    // from a cdn, which this render can not load. The file is complete either way, so it is
-    // reported rather than failing the build.
-    for (const error of page.errors) {
-      console.warn(`[ssg] ! ${page.path}: ${String(error).split("\n")[0]}`);
-    }
-  }
-
-  if (missing.length) {
-    console.warn(`[ssg] ! ${missing.length} asset(s) not found: ${missing.join(", ")}`);
   }
 
   if (unstyled.length) {
     console.warn(`[ssg] ! no stylesheet declared for: ${unstyled.join(", ")}`);
   }
 
-  console.log(`[ssg] done, ${pages.length} pages written to ${Path.relative(ROOT_DIR, out)}`);
+  console.log(
+    `[ssg] done, ${pages.length} pages written to ${Path.relative(root, outputDirectory)}`,
+  );
 }
 
-if (import.meta.main) {
-  try {
-    await main();
-  } catch (error) {
-    console.error(`[ssg] ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
-  }
+/**
+ * Prerenders the site, as part of the build.
+ *
+ * `closeBundle` is the hook: by the time it runs the shell and its manifest are on disk, so the
+ * pass reads the same output the browser will. It only runs when Vite's `appType` is `custom`,
+ * which is how `vite.config.js` says "this build answers its own html" - `npm run build:ssg`.
+ *
+ * A build that empties `dist/` first (the default) is what makes the pass safe to run in one go:
+ * the pages are written over the shell, so a second pass without a rebuild would read a page.
+ */
+export function ssg(options: SsgOptions = {}): Plugin {
+  let config: ResolvedConfig;
+
+  return {
+    name: "shell:ssg",
+    apply: "build",
+    configResolved(resolved) {
+      config = resolved;
+    },
+    async closeBundle() {
+      if (config.appType !== "custom") return;
+
+      const outputDirectory =
+        options.outputDirectory ?? Path.resolve(config.root, config.build.outDir);
+
+      report(await generate({ ...options, outputDirectory }), config.root);
+    },
+  };
 }
+
+export default ssg;
