@@ -1,6 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
-import type { RenderMode } from "./ribbon";
+import type { RenderMode } from "./components/ribbon";
 import type { Route } from "./router";
 
 // The marker a prerendered page carries, and the route it exposes on a global - both written by
@@ -47,7 +47,7 @@ if (!customElements.get("vi-router")) {
 const stage = document.querySelector("vi-router");
 
 /**
- * Says how the markup on screen was produced - see `./ribbon.ts`. The ribbon is the shell's own
+ * Says how the markup on screen was produced - see `./components/ribbon.ts`. The ribbon is the shell's own
  * custom element (`<render-mode>`), carried by `index.html` outside the stage, so re-rendering a
  * route cannot take it with it. Only the shell knows the mode, so it sets the element's `mode`.
  */

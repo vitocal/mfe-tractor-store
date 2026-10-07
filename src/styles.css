@@ -267,7 +267,7 @@ vi-router {
 }
 
 /**
- * The ribbon that says how the page on screen was rendered - see `src/ribbon.ts`.
+ * The ribbon that says how the page on screen was rendered - see `src/components/ribbon.ts`.
  *
  * It is the shell's own custom element, `<render-mode>`, carried by `index.html` outside the
  * stage. Fixed, so it cannot shift anything: this app counts its layout shifts, and a badge is

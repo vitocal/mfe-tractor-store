@@ -4,10 +4,10 @@ import Path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { RenderModeRibbon, RIBBON_ATTRIBUTE, RIBBON_TAG } from "../../src/ribbon.ts";
+import { RenderModeRibbon, RIBBON_ATTRIBUTE, RIBBON_TAG } from "../../src/components/ribbon.ts";
 
 /**
- * The ribbon lives in the shell (`src/ribbon.ts`) and has no test runner of its own, so it is
+ * The ribbon lives in the shell (`src/components/ribbon.ts`) and has no test runner of its own, so it is
  * covered here, next to the other shell modules (`router`, `tags`, `prerendered`).
  */
 const ROOT_DIR = Path.resolve(Path.dirname(fileURLToPath(import.meta.url)), "..", "..");

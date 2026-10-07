@@ -30,13 +30,13 @@ import type { Plugin, ResolvedConfig } from "vite";
 
 import { createRouter } from "../src/router.ts";
 import type { Route } from "../src/router.ts";
-import { tagsIn } from "../src/tags.ts";
 import { markPrerendered, withRoute, withoutRoute } from "./prerendered.ts";
 import { CE_ORIGIN, ceRenderPages } from "./ce-render.ts";
 import {
   designSystemBuild,
   stylesByTag,
   stylesForTags,
+  tagsIn,
   teamBuild,
   unknownTags,
   withStylesheets,

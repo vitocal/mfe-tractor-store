@@ -7,7 +7,7 @@
  * reports what the shell *saw*, not what a build was configured to do, and it flips as you
  * navigate between the two kinds of page.
  *
- * It is a custom element of the shell's own catalog (`./catalog.ts`), sitting in `index.html`
+ * It is a custom element of the shell's own catalog (`../catalog.ts`), sitting in `index.html`
  * outside the stage, so re-rendering a route cannot take it with it. It says nothing until the
  * shell tells it a mode, because it cannot know: `styles.css` keeps it out of the way until then.
  */

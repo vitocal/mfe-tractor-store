@@ -81,7 +81,8 @@ a route that no pass covers is a page the browser rendered, and it says so. So d
 `router.navigate` - while the same url typed into the address bar arrives prerendered.
 
 The ribbon is a custom element of the shell's own catalog -
-[`src/ribbon.ts`](./src/ribbon.ts), registered in [`src/catalog.ts`](./src/catalog.ts) and carried
+[`src/components/ribbon.ts`](./src/components/ribbon.ts), registered in
+[`src/catalog.ts`](./src/catalog.ts) and carried
 by [`index.html`](./index.html) on every page, outside the stage, so re-rendering a route cannot
 take it with it. The shell is the only thing that knows the mode, so
 [`src/app.ts`](./src/app.ts) sets the element's `mode` attribute and the element does the rest.

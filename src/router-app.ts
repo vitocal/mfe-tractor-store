@@ -1,6 +1,6 @@
 import { createRouter } from "./router";
 import routes from "./routes";
-import type { RenderMode } from "./ribbon";
+import type { RenderMode } from "./components/ribbon";
 
 /**
  * The SPA shell.
@@ -16,7 +16,7 @@ import type { RenderMode } from "./ribbon";
 const stage = document.querySelector("vi-router");
 
 /**
- * Says how the markup on screen was produced - see `./ribbon.ts`. The ribbon is the shell's own
+ * Says how the markup on screen was produced - see `./components/ribbon.ts`. The ribbon is the shell's own
  * custom element (`<render-mode>`), carried by `index.html`; only the shell knows the mode, so it
  * is set here.
  */

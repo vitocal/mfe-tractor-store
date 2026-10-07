@@ -21,9 +21,8 @@ import Path from "node:path";
 import { ServerRenderer, ServerRendererLogLevelEnum } from "@happy-dom/server-renderer";
 import type { IFetchInterceptor, IOptionalBrowserSettings } from "happy-dom";
 
-import { withStylesheets } from "./component-styles.ts";
+import { tagsIn, withStylesheets } from "./component-styles.ts";
 import type { Manifest } from "./component-styles.ts";
-import { tagsIn } from "../src/tags.ts";
 
 /* ------------------------------------------------------------------ assets -- */
 

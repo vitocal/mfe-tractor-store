@@ -7,12 +7,13 @@ import { catalog as checkout } from "@mfe-tractor/checkout";
 /**
  * The shell's own custom elements, alongside the teams' and the design system's.
  *
- * The ribbon that reports how the page on screen was rendered - see `./ribbon.ts`. `index.html`
- * carries `<render-mode>` on every page, and this is the loader `ce-autoloader` upgrades it with.
- * The key has to be the tag the element registers itself under (`RIBBON_TAG` in `./ribbon.ts`).
+ * The ribbon that reports how the page on screen was rendered - see `./components/ribbon.ts`.
+ * `index.html` carries `<render-mode>` on every page, and this is the loader `ce-autoloader`
+ * upgrades it with. The key has to be the tag the element registers itself under (`RIBBON_TAG`
+ * in `./components/ribbon.ts`).
  */
 const shell = {
-    "render-mode": () => import("./ribbon"),
+    "render-mode": () => import("./components/ribbon"),
 };
 
 const vendors = {

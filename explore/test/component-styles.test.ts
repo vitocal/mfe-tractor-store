@@ -5,11 +5,11 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import catalog from "../dist/catalog.js";
-import { tagsIn } from "../../src/tags.ts";
 import {
   designSystemBuild,
   stylesByTag,
   stylesForTags,
+  tagsIn,
   teamBuild,
   unknownTags,
   withStylesheets,
