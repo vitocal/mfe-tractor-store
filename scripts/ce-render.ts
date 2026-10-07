@@ -343,34 +343,111 @@ export interface CeRenderOptions {
   debug?: boolean;
 }
 
-/**
- * Expands the custom elements in `html`, and returns the html with their stylesheets linked.
- *
- * The manifest and the catalog are the two things a build already publishes: what it emitted
- * (and which stylesheet each module needs), and where each tag's module lives. Together they
- * are enough to render the markup the way the browser would, which is what a server that wants
- * to answer with html - instead of a shell that fills itself in later - needs.
- *
- * Throws when the render fails, or when a component would not load: a page that quietly lost
- * its content is worse than a failed request.
- */
-export async function ceRenderToString(
-  html: string,
-  manifest: Manifest,
-  catalog: Catalog,
-  options: CeRenderOptions = {},
-): Promise<string> {
-  const { catalogUrl, timeout = 30000 } = options;
+/** A build the pages of a batch render through */
+export interface CeRenderBuild {
+  /** The url the build's catalog is served under, eg `/explore/dist/catalog.js` */
+  catalogUrl: string;
+  /** The build's catalog: tag -> loader, the same file the browser loads */
+  catalog: Catalog;
+  /** What the build emitted, and which stylesheet each module was compiled into */
+  manifest: Manifest;
+}
 
-  if (!catalogUrl) {
+/** One page of a batch */
+export interface CeRenderPage {
+  /** The url the page is rendered for. Only its path matters: it resolves relative assets. */
+  url?: string;
+  /** The page's html, with its custom elements still unexpanded */
+  html: string;
+}
+
+export interface CeRenderPagesOptions {
+  /**
+   * The builds the batch renders through: one for every team that has a page in it, and for every
+   * team whose components those pages use. One renderer serves the batch, so its catalogs are all
+   * loaded up front.
+   */
+  builds: CeRenderBuild[];
+  /** Directories built files are read from, tried in order. Defaults to the working directory */
+  roots?: string[];
+  /** Url prefixes of the built code the render may run. Defaults to every build's own directory */
+  code?: string[];
+  /** Milliseconds a batch may take before it is abandoned */
+  timeout?: number;
+  /** Prints what the render is waiting for, which is how to tell a slow render from a stuck one */
+  debug?: boolean;
+}
+
+/** The url a page is rendered for: it is served at the origin's root unless it says otherwise */
+function urlOf(page: CeRenderPage): string {
+  return page.url ?? `${CE_ORIGIN}/`;
+}
+
+/** The directory a catalog is served under, which is also where the code it loads lives */
+function catalogDir(catalogUrl: string): string {
+  return catalogUrl.slice(0, catalogUrl.lastIndexOf("/") + 1);
+}
+
+/**
+ * The stylesheets the tags in `html` need, resolved against every build in a batch.
+ *
+ * Each build is asked about its own manifest, so a page that uses another team's components is
+ * linked that team's stylesheets too - which is what a batch has and a single build can not know.
+ */
+function stylesForBuilds(html: string, builds: CeRenderBuild[]): string[] {
+  const urls = new Set<string>();
+
+  for (const build of builds) {
+    for (const url of stylesFor(html, build.manifest, build.catalog)) urls.add(url);
+  }
+
+  return [...urls].sort();
+}
+
+/**
+ * Expands the custom elements in every page, and returns each page's html with its stylesheets
+ * linked.
+ *
+ * This is `ceRenderToString` for more than one page, and it is faster for the reason the prerender
+ * pass is: the window, the catalogs and the module registry are built once and reused, and that
+ * setup is what a render costs - a page with nothing in it pays almost all of it. Rendering a
+ * page at a time means paying it per page; rendering a batch means paying it once.
+ *
+ * One renderer serves the whole batch, so every build the pages need has to be listed in `builds`:
+ * the catalogs are loaded up front, and a page that uses another team's components needs that
+ * team's catalog there. Stylesheets are still resolved per page, against the build that declares
+ * its tags.
+ *
+ * Every page needs a url of its own. A render answers with the url it was for, and the answer is
+ * matched to the page by that url - so a batch of pages that share one is a batch whose pages
+ * would be answered with each other's html.
+ *
+ * Throws when a page fails, naming it: a page that quietly lost its content is worse than a failed
+ * request.
+ */
+export async function ceRenderPages(
+  pages: CeRenderPage[],
+  options: CeRenderPagesOptions,
+): Promise<string[]> {
+  const { builds, timeout = 30000 } = options;
+
+  if (!builds.length) {
     throw new Error(
-      'ceRenderToString needs the url its catalog is served under, eg "/explore/dist/catalog.js".',
+      "ceRenderPages needs a build to render through, eg the catalog and manifest of a team.",
     );
   }
 
-  const url = options.url ?? `${CE_ORIGIN}/`;
+  const catalogUrls = builds.map((build) => build.catalogUrl);
+  const urls = pages.map(urlOf);
+
+  // A render answers with the url it was for, and the answer is matched to the page by that url,
+  // so two pages can not share one: the second would be answered with the first one's html.
+  if (new Set(urls).size !== urls.length) {
+    throw new Error("ceRenderPages needs a distinct url for every page in the batch.");
+  }
+
   const state: CeAssetState = {
-    code: options.code ?? [catalogUrl.slice(0, catalogUrl.lastIndexOf("/") + 1)],
+    code: options.code ?? catalogUrls.map(catalogDir),
     roots: options.roots ?? [process.cwd()],
     missing: new Set<string>(),
   };
@@ -381,29 +458,79 @@ export async function ceRenderToString(
     // A worker receives its configuration through structured cloning, which can not carry the
     // fetch interceptor (a function), so the render runs in this process.
     worker: { disable: true },
-    render: { setupScript: ceSetupScript([catalogUrl]), timeout },
+    // One page at a time: they share a browser, and a page that fails stays attributable.
+    render: { maxConcurrency: 1, setupScript: ceSetupScript(catalogUrls), timeout },
     browser: ceBrowserSettings(createAssetResponder(state)),
   });
 
-  let result;
+  let results: { url?: string; content?: string; error?: string }[] = [];
 
   try {
-    [result] = await renderer.render([{ url, html }]);
+    results = await renderer.render(
+      pages.map((page) => ({ url: urlOf(page), html: page.html })),
+    );
   } finally {
     await renderer.close();
   }
 
-  if (!result || result.error) {
-    const missing = [...state.missing].sort();
-    const assets = missing.length ? `\nAssets no root could provide: ${missing.join(", ")}` : "";
+  const missing = [...state.missing].sort();
+  const assets = missing.length ? `\nAssets no root could provide: ${missing.join(", ")}` : "";
+  // Results come back tagged with the url they are for, and not in the order the pages were given,
+  // so they are matched by url rather than by position.
+  const byUrl = new Map(results.map((result) => [result.url ?? "", result]));
 
-    throw new Error(`Could not render ${url}: ${result?.error ?? "no result"}${assets}`);
+  return pages.map((page) => {
+    const url = urlOf(page);
+    const result = byUrl.get(url);
+
+    if (!result || result.error) {
+      throw new Error(`Could not render ${url}: ${result?.error ?? "no result"}${assets}`);
+    }
+
+    const rendered = result.content ?? "";
+    const failed = renderError(rendered);
+
+    if (failed) throw new Error(`Could not load the components for ${url}: ${failed}`);
+
+    return withStylesheets(rendered, stylesForBuilds(rendered, builds));
+  });
+}
+
+/**
+ * Expands the custom elements in `html`, and returns the html with their stylesheets linked.
+ *
+ * The manifest and the catalog are the two things a build already publishes: what it emitted
+ * (and which stylesheet each module needs), and where each tag's module lives. Together they
+ * are enough to render the markup the way the browser would, which is what a server that wants
+ * to answer with html - instead of a shell that fills itself in later - needs.
+ *
+ * This is `ceRenderPages` for a single page against a single build. A caller with more than one
+ * page should use that instead, and pay the render's setup once rather than per page.
+ *
+ * Throws when the render fails, or when a component would not load: a page that quietly lost
+ * its content is worse than a failed request.
+ */
+export async function ceRenderToString(
+  html: string,
+  manifest: Manifest,
+  catalog: Catalog,
+  options: CeRenderOptions = {},
+): Promise<string> {
+  const { catalogUrl } = options;
+
+  if (!catalogUrl) {
+    throw new Error(
+      'ceRenderToString needs the url its catalog is served under, eg "/explore/dist/catalog.js".',
+    );
   }
 
-  const rendered = result.content ?? "";
-  const failed = renderError(rendered);
+  const [rendered] = await ceRenderPages([{ url: options.url, html }], {
+    builds: [{ catalogUrl, catalog, manifest }],
+    roots: options.roots,
+    code: options.code,
+    timeout: options.timeout,
+    debug: options.debug,
+  });
 
-  if (failed) throw new Error(`Could not load the components for ${url}: ${failed}`);
-
-  return withStylesheets(rendered, stylesFor(rendered, manifest, catalog));
+  return rendered;
 }

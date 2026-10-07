@@ -268,6 +268,34 @@ That is what a server answering with html needs - the markup is already rendered
 reaches the browser, instead of a shell that fills itself in later. It is also what the SSG
 pass is built on, and what its tests use to render a single component in isolation.
 
+A server with more than one page to render should use [`ceRenderPages`](./scripts/ce-render.ts)
+instead, which is that same render for a batch of pages: one renderer serves them all, and the
+setup it shares - the window, the catalogs, the module registry - is what a render mostly costs.
+See [Performance](#performance) for what that is worth.
+
+```ts
+const [home, stores] = await ceRenderPages(
+  [
+    { url: "http://localhost/", html: shellWith("<explore-pages-home></explore-pages-home>") },
+    { url: "http://localhost/stores", html: shellWith("<explore-pages-stores></explore-pages-stores>") },
+  ],
+  {
+    builds: [
+      { catalogUrl: "/explore/dist/catalog.js", catalog, manifest },
+      { catalogUrl: "/checkout/dist/catalog.js", catalog: checkoutCatalog, manifest: checkoutManifest },
+    ],
+    roots: [process.cwd()],
+  },
+);
+```
+
+Every build the batch needs is listed in `builds`, because one renderer loads all of their
+catalogs up front: a page using another team's components needs that team's catalog there.
+Stylesheets are still resolved per page, against the build that declares its tags.
+
+Every page needs a url of its own, too: a render is matched back to its page by url, so two pages
+sharing one would be answered with each other's html. That is an error rather than a surprise.
+
 Three things have to be rewritten for a render to work at all, and all three are
 happy-dom limitations rather than anything about the app:
 
@@ -392,13 +420,19 @@ Two things that table says, and neither is what you would guess:
 - **A renderer is free to build, but not to use.** `new ServerRenderer` is a configuration object;
   the window behind it is created per render, so a caller with many pages pays it many times.
 
-So the way to make it fast is to render many pages through one renderer, which is what the pass
-does - and the benchmark measures that too, along with overlapping them:
+So the way to make it fast is to render many pages through one renderer, which is what
+[`ceRenderPages`](./scripts/ce-render.ts) does and what the pass has always done. The benchmark
+measures it, along with overlapping calls:
 
 ```
-  one renderer  31 pages in 293.4ms: 9.46ms a page, 2.24x one at a time
-  concurrency   4 at a time on 8 cores: 278.0ms for 31 pages, 2.37x one at a time
+  concurrency    4 at a time on 8 cores: 300.7ms for 31 pages, 2.26x one at a time
+  ceRenderPages  1 call, 31 pages in 341.3ms: 11.0ms a page, 1.99x one at a time
+                 3 calls, that team's build only: 170.5ms (5.50ms a page, 3.99x)
 ```
+
+The second line is the honest comparison - the same 31 pages, the same output, one call instead of
+93. The third is cheaper because it does *less*: a batch given one team's build renders another
+team's tags as placeholders, the way the page tests do.
 
 The numbers above are from an 8 core laptop, and the shape of them is what to read rather than the
 digits. Options: `--team=explore,decide`, `--iterations=3` (passes over every page), `--samples=5`

@@ -34,12 +34,13 @@ import { ServerRenderer, ServerRendererLogLevelEnum } from "@happy-dom/server-re
 
 import {
   ceBrowserSettings,
+  ceRenderPages,
   ceRenderToString,
   ceSetupScript,
   createAssetResponder,
   stylesFor,
 } from "./ce-render.ts";
-import type { Catalog, CeAssetState, CeRenderOptions } from "./ce-render.ts";
+import type { Catalog, CeAssetState, CeRenderBuild, CeRenderOptions } from "./ce-render.ts";
 import { withStylesheets } from "./component-styles.ts";
 import type { Manifest } from "./component-styles.ts";
 import { pagesFor, readRoutes, readShell } from "./ssg.ts";
@@ -233,56 +234,62 @@ async function pooled(jobs: Job[], limit: number, work: (job: Job) => Promise<un
   await Promise.all(Array.from({ length: Math.min(limit, jobs.length) }, runner));
 }
 
-/** What rendering every page through one renderer cost */
-interface BatchedPass {
+/** What rendering a set of pages in one call cost */
+interface BatchPass {
+  /** How many calls the batch took: one, or one per team */
+  calls: number;
   wall: number;
   perPage: number;
-  /** Errors the pages reported, eg a third party import a render can not load */
-  errors: string[];
+  /** The error the call threw, if it threw: one page that will not render fails the whole call */
+  error: string;
 }
 
 /**
- * Renders every page through *one* renderer, the way the prerender pass does.
+ * Renders pages through one call of `ceRenderPages`.
  *
- * This is the floor paid once instead of once per page: the window, the catalog setup and the
- * module registry are shared across every page, so what is left is the page itself. It loads every
- * team's catalog, as a shared renderer has to, and renders one page at a time so that the sharing
- * is what is being measured.
+ * That is the entry point this exists to compare against: it pays the render's setup once for the
+ * whole batch, rather than once per page, and everything a batch shares is what the difference
+ * between the two numbers is.
  */
-async function batchedPass(jobs: Job[], teams: readonly Team[]): Promise<BatchedPass> {
-  const catalogs = teams.map((team) => `/${team.name}/dist/catalog.js`);
-  const state: CeAssetState = {
-    code: teams.flatMap((team) => [
-      `/${team.name}/dist/chunks/`,
-      `/${team.name}/dist/catalog.js`,
-    ]),
-    roots: ROOTS,
-    missing: new Set<string>(),
-  };
-  const renderer = new ServerRenderer({
-    logLevel: ServerRendererLogLevelEnum.error,
-    worker: { disable: true },
-    render: { maxConcurrency: 1, setupScript: ceSetupScript(catalogs) },
-    browser: ceBrowserSettings(createAssetResponder(state)),
-  });
-  // No `outputFile`: a render that is only being measured writes nothing.
-  const items = jobs.map((job) => ({ url: job.page.url, html: job.page.html }));
-  let results: { error?: string }[] = [];
-  let wall = 0;
+async function batchPass(jobs: Job[], builds: CeRenderBuild[], calls: number): Promise<BatchPass> {
+  const pages = jobs.map((job) => ({ url: job.page.url, html: job.page.html }));
+  let error = "";
+  let wall = Number.POSITIVE_INFINITY;
 
-  try {
-    wall = await timed(async () => {
-      results = await renderer.render(items);
-    });
-  } finally {
-    await renderer.close();
+  // Best of two passes: a batch's first pass pays for code that is not compiled yet, and the
+  // one-shot render it is compared against reports a median over several passes.
+  for (let pass = 0; pass < 2; pass += 1) {
+    error = "";
+    wall = Math.min(
+      wall,
+      await timed(async () => {
+        try {
+          await ceRenderPages(pages, { builds, roots: ROOTS });
+        } catch (failure) {
+          error = failure instanceof Error ? failure.message : String(failure);
+        }
+      }),
+    );
   }
 
-  return {
-    wall,
-    perPage: wall / (jobs.length || 1),
-    errors: results.flatMap((result) => (result.error ? [result.error] : [])),
-  };
+  return { calls, wall, perPage: wall / (pages.length || 1), error };
+}
+
+/** The build each team's pages render from: what a batch of those pages has to be given */
+function buildsFor(jobs: Job[]): CeRenderBuild[] {
+  const builds = new Map<string, CeRenderBuild>();
+
+  for (const job of jobs) {
+    if (builds.has(job.page.team)) continue;
+
+    builds.set(job.page.team, {
+      catalogUrl: job.options.catalogUrl ?? "",
+      catalog: job.catalog,
+      manifest: job.manifest,
+    });
+  }
+
+  return [...builds.values()];
 }
 
 /**
@@ -350,8 +357,11 @@ export interface BenchReport {
   steady: Stats;
   slowest: { team: string; path: string; median: number }[];
   concurrency: { limit: number; wall: number; speedup: number } | null;
-  /** Every page through one renderer, and what each page paid for it */
-  batched: (BatchedPass & { speedup: number }) | null;
+  /** Every page in one call of `ceRenderPages`, and what each page paid for it */
+  batch: {
+    all: BatchPass & { speedup: number };
+    perTeam: BatchPass & { speedup: number };
+  };
 }
 
 /* ---------------------------------------------------------------------- api -- */
@@ -427,7 +437,23 @@ export async function bench(options: BenchOptions = {}): Promise<BenchReport> {
   const steady = iterations > 1 ? stats(iteration(1)) : first;
 
   const wall = concurrency > 0 ? await timed(() => pooled(limited, concurrency, renderPage)) : 0;
-  const batched = await batchedPass(limited, teams);
+  const builds = buildsFor(limited);
+  const batch = await batchPass(limited, builds, 1);
+  const teamBatches: BatchPass[] = [];
+
+  for (const team of teams) {
+    const pages = limited.filter((job) => job.page.team === team.name);
+
+    if (pages.length) teamBatches.push(await batchPass(pages, buildsFor(pages), 1));
+  }
+
+  const teamWall = teamBatches.reduce((sum, pass) => sum + pass.wall, 0);
+  const perTeamBatch: BatchPass = {
+    calls: teamBatches.length,
+    wall: teamWall,
+    perPage: teamWall / (limited.length || 1),
+    error: teamBatches.find((pass) => pass.error)?.error ?? "",
+  };
 
   return {
     pages: limited.length,
@@ -446,7 +472,13 @@ export async function bench(options: BenchOptions = {}): Promise<BenchReport> {
       concurrency > 0
         ? { limit: concurrency, wall, speedup: (walls.at(-1) ?? wall) / wall }
         : null,
-    batched: { ...batched, speedup: (walls.at(-1) ?? batched.wall) / batched.wall },
+    batch: {
+      all: { ...batch, speedup: (walls.at(-1) ?? batch.wall) / batch.wall },
+      perTeam: {
+        ...perTeamBatch,
+        speedup: (walls.at(-1) ?? perTeamBatch.wall) / perTeamBatch.wall,
+      },
+    },
   };
 }
 
@@ -565,16 +597,23 @@ function print(report: BenchReport, json: boolean): void {
     );
   }
 
-  if (report.batched) {
-    const { wall, perPage, speedup, errors } = report.batched;
+  const batch = report.batch.all;
+  const perTeamBatch = report.batch.perTeam;
 
-    console.log(
-      `  one renderer  ${report.pages} pages in ${ms(wall)}: ${ms(perPage)} a page, ` +
-        `${times(speedup)} one at a time`,
-    );
+  console.log(
+    `  ceRenderPages  1 call, ${report.pages} pages in ${ms(batch.wall)}: ${ms(batch.perPage)} ` +
+      `a page, ${times(batch.speedup)} one at a time`,
+  );
+  console.log(
+    `                 ${perTeamBatch.calls} calls, that team's build only: ` +
+      `${ms(perTeamBatch.wall)} (${ms(perTeamBatch.perPage)} a page, ` +
+      `${times(perTeamBatch.speedup)})`,
+  );
+  console.log(
+    "  (a batch given one team's build renders another team's tags as placeholders, so it does less)",
+  );
 
-    if (errors.length) console.log(`  render errors  ${errors.length}, first: ${errors[0]}`);
-  }
+  if (batch.error) console.log(`  render error   ${batch.error}`);
 
   console.log("");
 }
