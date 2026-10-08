@@ -1,0 +1,21 @@
+# MFE Store Example
+
+A non-trivial micro frontends example store. Three teams - explore, decide and checkout - publish
+their components as custom elements, and the shell prerenders every route at build time, so the
+markup behind each url below is already in the html a crawler receives.
+
+## Pages
+
+- [Home](/): the categories the store sells
+- [Machines](/products): every category
+- [Classic tractors](/products/classic)
+- [Autonomous tractors](/products/autonomous)
+- [Stores](/stores): the stores that stock the machines
+- [Cart](/checkout/cart)
+- [Checkout](/checkout/checkout)
+- [Order received](/checkout/thanks)
+
+## Product pages
+
+Every machine has a page at `/product/:id` - for example [AU-03](/product/AU-03). The ids are the
+ones `decide/database/database.json` holds, and a `?sku=` query picks one of a machine's variants.

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ceRenderToString, splitMixedImports, stylesFor } from "../../scripts/ce-render.ts";
+import {
+  ceRenderToString,
+  renderable,
+  splitMixedImports,
+  stylesFor,
+} from "../../scripts/ce-render.ts";
 import type { Catalog } from "../../scripts/ce-render.ts";
 import type { Manifest } from "../../scripts/component-styles.ts";
 
@@ -37,6 +42,28 @@ describe("ce render", () => {
       const source = `import{ce}from"./a.js";import Upgraded from"./b.js";`;
 
       assert.equal(splitMixedImports(source), source);
+    });
+  });
+
+  describe("renderable", () => {
+    it("empties the dependency list a preload helper is called with", () => {
+      const loader = `()=>n(()=>import(\`./chunks/home.ce.js\`),__vite__mapDeps([5,3,4]),import.meta.url)`;
+
+      assert.equal(
+        renderable(loader),
+        `()=>n(()=>import(\`./chunks/home.ce.js\`),[],import.meta.url)`,
+      );
+    });
+
+    it("empties it for a module factory too, not just a bare import", () => {
+      // decide's catalog wraps its Vue runtime in the helper this way. Matching the call *shape*
+      // left this one alone, so the helper ran in the render, resolved its links against the
+      // render's origin, and the pages shipped two links to `http://localhost`.
+      const loader =
+        "async function vue_ce_import(e){let{defineCustomElement:t}=await n(async()=>{let{defineCustomElement:e}=await import(`./chunks/vue.runtime.esm-bundler.js`);return{defineCustomElement:e}},__vite__mapDeps([0,1]),import.meta.url)}";
+
+      assert.ok(renderable(loader).includes("},[],import.meta.url)"));
+      assert.ok(!renderable(loader).includes("__vite__mapDeps([0,1])"));
     });
   });
 

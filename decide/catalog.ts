@@ -48,6 +48,7 @@ function asCatalogMap(import_globs: Record<string, () => void>) {
 
 export const pages = asCatalogMap(import.meta.glob(`./pages/**/*.ce.vue`, { eager: false }))
 export const components = asCatalogMap(import.meta.glob(`./components/**/*.ce.vue`, { eager: false }));
+
 export const catalog = {
     ...pages,
     ...components,

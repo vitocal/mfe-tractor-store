@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "preview:ssg": "npm run build:ssg && vite preview",
     "bench": "npm run build && node scripts/bench-render.ts",
+    "report": "node scripts/weight-report.ts",
     "test": "npm test --workspaces"
   },
   "workspaces": [

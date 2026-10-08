@@ -48,6 +48,7 @@ Open `http://localhost:5173` in your browser.
 | `npm run build:ssg`   | The same with `APP_TYPE=ssr`: prerender every page too             |
 | `npm run preview`     | Serve the built output on `http://localhost:4173`                  |
 | `npm run preview:ssg` | `npm run build:ssg` followed by `npm run preview`                  |
+| `npm run report`      | What the built site weighs, as charts in `reports/weight.html`     |
 
 `npm run dev` always renders the SPA. To look at the prerendered output, build it and serve it:
 
@@ -238,6 +239,12 @@ all - `appType: "spa"` already serves the shell for every route there.
 - `npm test -w explore` runs the component tests, which render the built components in
   [Happy DOM](./explore/test/happy-dom-env.ts) - the same way the SSG pass does.
 - `CE_RENDER_TRACE=1 npm run build:ssg` logs every asset the render asks for.
+- A render is served at `http://localhost` - the origin it pretends to be - so a link it left in
+  the document would ship as a request to the visitor's own port 80. `renderable` empties the
+  bundler's preload dependency list, which is what keeps the helper from creating those links at
+  all, and the pass fails the build when a page still points at the render's origin.
+- `npm run report` reads the built output and draws it: the shell's weight, every page's, and the
+  network dependency tree of a page, in `reports/weight.html`.
 - The pass reads the shell html, so it writes the root page over it: a run that did not empty
   `dist/` first would read a page back. `npm run build` empties it, which is what makes the
   single command safe.

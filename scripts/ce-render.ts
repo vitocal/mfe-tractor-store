@@ -110,25 +110,34 @@ function withoutImportMetaResolve(source: string): string {
 }
 
 /**
- * A catalog's loaders, without the stylesheet preloading.
+ * A built module without the bundler's preloading.
  *
- * A catalog wraps every loader in the bundler's preload helper, which fetches a component's
- * stylesheet and *waits for it* before importing the module. That is what keeps a browser from
- * painting a component unstyled, and it is the one thing a render does not want: the stylesheets
- * are linked from the build manifest, and a render that waits on a `<link>` it never asked for
- * only defines its components once the page has already been serialized.
+ * Every lazy loader a bundler emits is wrapped in its preload helper:
  *
- * `()=>n(()=>import("…"),__vite__mapDeps([…]),import.meta.url)` becomes `()=>import("…")`, so the
- * module is imported directly. Only the loader shape a catalog uses is matched - the two halves
- * of the call have to line up - and only the render ever sees the result.
+ *     () => n(() => import("./chunks/home.ce.js"), __vite__mapDeps([5, 3, 4]), import.meta.url)
+ *
+ * The helper creates a `<link rel="modulepreload">` per dependency - and a `<link rel="stylesheet">`
+ * it then *waits for* - each resolved against `import.meta.url`. In a browser that is what keeps a
+ * component from being painted unstyled. In a render it is two failures at once:
+ *
+ * - the stylesheets come from the build manifest instead, so a render that waits on a `<link>` it
+ *   never asked for only defines its components once the page has already been serialized;
+ * - a link resolved against `import.meta.url` is resolved against the *render's* origin
+ *   (`http://localhost`), and the render serializes the document it ends up with - so the link is
+ *   written into the page and the browser asks port 80 of the visitor's own machine for a chunk.
+ *
+ * Emptying the dependency list stops both: the helper only touches the document when it has
+ * dependencies to preload (`if (deps && deps.length > 0)`), and a loader called with no
+ * dependencies is the import itself. Matching the *list* rather than the call shape is what makes
+ * that hold for every loader a bundler emits - a module factory wrapped in the helper
+ * (`n(async () => { … }, __vite__mapDeps([0, 1]), import.meta.url)`, which decide's catalog uses
+ * for its Vue runtime) as much as a bare `import()`.
  */
 function withoutPreload(source: string): string {
-  return source
-    .replace(/\(\)=>n\(\(\)=>import\(/g, "()=>import(")
-    .replace(/\),__vite__mapDeps\(\[[^\]]*\]\),import\.meta\.url\)/g, ")");
+  return source.replace(/__vite__mapDeps\(\[[^\]]*\]\)/g, "[]");
 }
 
-/** A built module as a render needs it: importable, and without the stylesheet preloading */
+/** A built module as a render needs it: importable, and without the bundler's preloading */
 export function renderable(source: string): string {
   return withoutPreload(withoutImportMetaResolve(splitMixedImports(source)));
 }

@@ -161,6 +161,28 @@ function codeUrls(teams: readonly Team[]): string[] {
   ]);
 }
 
+/**
+ * Urls in `html` that point back at the origin the render pretends to be served from.
+ *
+ * A render is not a browser and has no server: it answers its own requests from disk under
+ * `CE_ORIGIN`. Anything it leaves in the document that points at that origin - the preload links
+ * its bundler helper creates, an asset a component appends itself - is serialized into the page as
+ * `http://localhost/…`: a request to port 80 of the visitor's own machine, which can not resolve.
+ *
+ * `renderable` strips the preload helper's links at the source, and this is the belt to that
+ * braces. It is a check rather than a cleanup on purpose: a page that would ship a dead url is a
+ * broken page, and a build that fails loudly is how it stops being one.
+ */
+export function renderOriginUrls(html: string): string[] {
+  const urls = new Set<string>();
+
+  for (const [, url] of html.matchAll(new RegExp(`(?:href|src)="(${CE_ORIGIN}[^"]*)"`, "g"))) {
+    urls.add(url);
+  }
+
+  return [...urls].sort();
+}
+
 /** The built shell, the page every route starts from */
 export async function readShell(shellDir: string = OUTPUT_DIR): Promise<string> {
   const file = Path.join(shellDir, "index.html");
@@ -332,6 +354,16 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
 
     if (undeclared.length) {
       throw new Error(`${item.path} uses component(s) no build declares: ${undeclared.join(", ")}`);
+    }
+
+    // The render's own origin is not the site's, so a page that kept a url pointing at it would
+    // ask the visitor's machine for the asset. See `renderOriginUrls`.
+    const leaked = renderOriginUrls(page);
+
+    if (leaked.length) {
+      throw new Error(
+        `${item.path} points at the render's origin (${CE_ORIGIN}): ${leaked.join(", ")}`,
+      );
     }
 
     const { urls: pageStyles, unstyled } = stylesForTags(styles, tags);

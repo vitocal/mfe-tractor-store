@@ -3,7 +3,13 @@ import { describe, it } from "node:test";
 
 import type { Route } from "../../src/router.ts";
 import { TEAMS } from "../../scripts/ssg-teams.ts";
-import { fillStage, outputFileFor, pathsFor, withExplicitHead } from "../../scripts/ssg.ts";
+import {
+  fillStage,
+  outputFileFor,
+  pathsFor,
+  renderOriginUrls,
+  withExplicitHead,
+} from "../../scripts/ssg.ts";
 
 import routes from "../dist/routes.js";
 
@@ -77,6 +83,31 @@ describe("ssg", () => {
       // A second pass starts from the file the first pass wrote
       assert.equal(fillStage(filled, "<explore-pages-home></explore-pages-home>"), filled);
       assert.equal(fillStage(filled, "<explore-pages-stores></explore-pages-stores>"), fillStage(template, "<explore-pages-stores></explore-pages-stores>"));
+    });
+  });
+
+  describe("renderOriginUrls", () => {
+    it("lists the urls a page kept from the render's own origin", () => {
+      const html = `<head><link rel="modulepreload" href="http://localhost/decide/dist/chunks/rolldown-runtime.js"><link rel="stylesheet" href="/assets/home-abc.css"></head>`;
+
+      assert.deepEqual(renderOriginUrls(html), [
+        "http://localhost/decide/dist/chunks/rolldown-runtime.js",
+      ]);
+    });
+
+    it("reads a src as well as a href, and reports each url once", () => {
+      const html = `<img src="http://localhost/cdn/img/logo.svg"><script src="http://localhost/index.js"></script><img src="http://localhost/cdn/img/logo.svg">`;
+
+      assert.deepEqual(renderOriginUrls(html), [
+        "http://localhost/cdn/img/logo.svg",
+        "http://localhost/index.js",
+      ]);
+    });
+
+    it("leaves a prerendered page alone", () => {
+      const html = `<head><link rel="stylesheet" href="/assets/home-abc.css"></head><body><img src="/cdn/img/logo.svg"></body>`;
+
+      assert.deepEqual(renderOriginUrls(html), []);
     });
   });
 

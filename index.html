@@ -3,14 +3,8 @@
 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MFE Store Example - SPA</title>
+<title>MFE Store Example</title>
 
-<!--
-  Cross-document view transitions: the opt-in must be active before the parser reaches <body>.
-  Chromium resolves the opt-in from the *active* stylesheets when <body> is inserted, and an external
-  <link rel="stylesheet"> is not guaranteed to be loaded by then (the transition is then skipped with
-  "ViewTransition opt-in disabled"). An inline <style> is parsed synchronously, so declare it here.
-  -->
 <style>
   @view-transition {
     navigation: auto;
@@ -45,8 +39,8 @@
 </head>
 
 <body>
-
   <vi-router class="tractor-app"></vi-router>
+
   <render-mode loading="eager"></render-mode>
 </body>
 
