@@ -16,7 +16,7 @@ Without manual hard-coded imports, without complex build-step tooling(module fed
 
 - Each team publishes a bunch of files, independently of one another:
   - A [routing file](./checkout/routes.ts)
-  - A web-components [catalog](./checkout/catalog.ts)
+  - A web-components [catalog](./checkout/catalog.ts): a tag -> loader table, and nothing else
   - Several compiled [web-components files](./checkout/components/minicart.ce.svelte) and its assets.
 
 - A shell glues/bundles them together:
@@ -354,6 +354,29 @@ that names a build but that no build declares (a build that did not run, a renam
 convention), and warns when a component's build declares no stylesheet at all. A tag outside
 every namespace - `<vi-router>`, a third party element - is somebody else's business and is
 left alone.
+
+### Catalogs
+
+A catalog is a lookup table and nothing else: a tag on one side, the loader that resolves it on the
+other. It is read by more than the browser - the shell joins every team's catalog into the master
+one, and the SSG reads them to work out which stylesheets a page needs - so a catalog may not
+import anything of its own. A framework in a catalog is a framework in the graph of everyone who
+reads it.
+
+Which is why turning a module into a custom element is the component's own business:
+
+| Team     | The module a catalog points at | Becomes a custom element by                       |
+| -------- | ------------------------------ | ------------------------------------------------- |
+| explore  | `pages/category.ce.tsx`        | registering itself when the module is imported    |
+| checkout | `pages/cart.ce.svelte`         | registering itself (`customElement: true`)        |
+| decide   | `pages/product.ce.ts`          | calling `asCustomElement` on the SFC next to it   |
+
+Vue's compiler owns an SFC's default export - it is the component options, not an element - so
+decide keeps a `<name>.ce.ts` beside each `<name>.ce.vue`, and the loaders resolve to the element
+class itself (`import: 'default'`). The Vue runtime is then reachable from a _component's_ chunk
+rather than the catalog's: `decide/dist/catalog.js` imports nothing but the components it loads, and
+the chunk holding Vue hangs off them. See [`decide/vue-ce.ts`](./decide/vue-ce.ts), and
+[`decide/test/catalog.test.ts`](./decide/test/catalog.test.ts), which holds the built catalog to it.
 
 ## Testing
 

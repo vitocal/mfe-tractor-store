@@ -16,14 +16,13 @@ export default defineConfig({
   // so neither the page nor the SSR bundle carries the router.
   define: {
     "import.meta.env.SPA_ROUTER": JSON.stringify(
-      appType === "custom"
-        ? ""
-        : '<script type="module" src="/src/router-app.ts" blocking="render"></script>',
+      appType === "custom" ? "" : '<script type="module" src="/src/router-app.ts" blocking="render"></script>',
     ),
   },
   plugins: [stageTeamAssets(), ssg()],
   build: {
     outDir: "dist/",
+    sourcemap: true,
     emptyOutDir: true,
     modulePreload: {
       polyfill: false,
@@ -33,6 +32,7 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       output: {
+        keepNames: true,
         entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name].js",
       },

@@ -54,7 +54,7 @@ export const TEAMS = [
   },
   {
     name: "decide",
-    extension: ".ce.vue",
+    extension: ".ce.ts",
     async params() {
       const { products = [] } = await readDatabase("decide");
 
