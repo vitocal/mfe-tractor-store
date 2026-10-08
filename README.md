@@ -237,8 +237,7 @@ all - `appType: "spa"` already serves the shell for every route there.
   the browser.
 - `npm test -w explore` runs the component tests, which render the built components in
   [Happy DOM](./explore/test/happy-dom-env.ts) - the same way the SSG pass does.
-- `CE_RENDER_TRACE=1 npm run build:ssg` logs every asset the render asks for, and `SSG_TRACE=1`
-  traces what it is waiting for. Between them, a page that renders wrong is usually obvious.
+- `CE_RENDER_TRACE=1 npm run build:ssg` logs every asset the render asks for.
 - The pass reads the shell html, so it writes the root page over it: a run that did not empty
   `dist/` first would read a page back. `npm run build` empties it, which is what makes the
   single command safe.
@@ -392,45 +391,6 @@ that mount by hand.
 
 `npm test` at the root runs all three.
 
-## Performance
-
-`npm run bench` measures what [`ceRenderToString`](./scripts/ce-render.ts) costs, on the pages the
-prerender pass writes - see [`scripts/bench-render.ts`](./scripts/bench-render.ts). It prints a
-table per team, the slowest pages, and where a render's time goes:
-
-```
-  per render    median 21.5ms, mean 22.4ms, p95 31.2ms, max 43.7ms
-
-  where the time goes (median, one page per team)
-  team           renderer    empty page      page        stylesheets
-  explore        0.04ms      18.7ms 85%      22.1ms      0.02ms
-```
-
-Two things that table says, and neither is what you would guess:
-
-- **Almost none of a render is the page.** A document with nothing in it costs ~90% of a full page:
-  the window, the catalogs, and the serialization. A page's own components are the other ~10%, and
-  linking its stylesheets is a rounding error.
-- **A renderer is free to build, but not to use.** `new ServerRenderer` is a configuration object;
-  the window behind it is created per render, so a caller with many pages pays it many times.
-
-So the way to make it fast is to render many pages through one renderer, which is what
-[`ceRenderPages`](./scripts/ce-render.ts) does and what the pass has always done. The benchmark
-measures it, along with overlapping calls:
-
-```
-  concurrency    4 at a time on 8 cores: 300.7ms for 31 pages, 2.26x one at a time
-  ceRenderPages  1 call, 31 pages in 341.3ms: 11.0ms a page, 1.99x one at a time
-                 3 calls, that team's build only: 170.5ms (5.50ms a page, 3.99x)
-```
-
-The second line is the honest comparison - the same 31 pages, the same output, one call instead of 93. The third is cheaper because it does _less_: a batch given one team's build renders another
-team's tags as placeholders, the way the page tests do.
-
-The numbers above are from an 8 core laptop, and the shape of them is what to read rather than the
-digits. Options: `--team=explore,decide`, `--iterations=3` (passes over every page), `--samples=5`
-(per step of the breakdown), `--pages=31`, `--concurrency=4` (0 to skip that pass), `--json`.
-
 ## Preview a single team
 
 In your terminal, enter the team folder and run `npm run dev`.
@@ -446,8 +406,3 @@ To publish a single team work, run `npm run build` inside the team folder (eg: [
 
 - **Per-route head tags.** Every prerendered page carries the shell's single `<title>`. There
   are no per-route titles, descriptions, canonicals or structured data yet.
-- **The mini-cart pops in.** It belongs to the checkout team, so a page of any other team
-  leaves its placeholder and the browser fills it later. Its stylesheet is linked and its box
-  is reserved, so the shift is contained rather than gone.
-- **Cold-cache font swap.** Raleway is `font-display: swap`, so a first visit with an empty
-  cache reflows the text once the font lands (~0.001 CLS).

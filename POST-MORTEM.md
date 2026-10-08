@@ -44,7 +44,7 @@ knows a chunk's stylesheet is the catalog's `__vite__mapDeps` preload map. Impor
 bypasses it, so the css was never requested.
 
 **Lesson.** When you add a build-time renderer to a system whose runtime does the same job, the
-runtime's *implicit* guarantees are what you lose - not its features. The lazy loader's "css
+runtime's _implicit_ guarantees are what you lose - not its features. The lazy loader's "css
 before define" was never written down as a contract, so nothing told us SSG had to
 re-establish it.
 
@@ -60,7 +60,7 @@ So the layout never moved - the page was simply **painted wrong**: the product g
 to a vertical stack, and then snapped into a grid. No shift was recorded, because the boxes
 were already the right size.
 
-Measuring the thing the user actually sees - the *first paint* - showed it immediately. With
+Measuring the thing the user actually sees - the _first paint_ - showed it immediately. With
 the shell's javascript parked, so only html and css could run:
 
 | `/products/classic` first paint | before  | after                 |
@@ -84,7 +84,7 @@ appended its stylesheet links, which meant:
 - worse, `/products/classic` inherited `/`'s `home-*.css` and `recommendations-*.css` - the
   per-route precision was quietly gone.
 
-`fillStage()` had made the *stage* idempotent; nothing had done the same for the head.
+`fillStage()` had made the _stage_ idempotent; nothing had done the same for the head.
 
 **Lesson.** A build pass that overwrites its own template needs an explicit marker for "the
 part I added". This is the kind of bug that never shows up in a single build and always shows
@@ -97,7 +97,7 @@ rebuild in between** and diffing.
 the markup the pass had just produced and drew the same thing again - a flash, and the pass's
 work wasted.
 
-It was also confusing to read, because a click listener in the same file *looked* like it did
+It was also confusing to read, because a click listener in the same file _looked_ like it did
 client-side navigation - its body was commented out, so it ran on every click and did nothing.
 That dead listener, plus a router that was still shipped and still ran, made it look like SSG
 mode did local navigation. It didn't, but nothing said so.
@@ -120,7 +120,7 @@ The pass covered explore alone. Extending it to decide and checkout should have 
 each team already had a route table and a catalog. Instead every page timed out, or rendered as
 a bare placeholder. Four separate causes, all of them invisible in a browser:
 
-**a. A team's catalog is where its components are *defined*.** The pass imported the built
+**a. A team's catalog is where its components are _defined_.** The pass imported the built
 `chunks/*.ce.js` directly. That works for Preact and Svelte, whose components call `register()`
 when their module is imported. Vue does not: the catalog is what calls
 `defineCustomElement(module.default)` and produces the constructor. So decide's chunks imported
@@ -137,10 +137,10 @@ either: the render waits for an import that will never resolve, and every page s
 looks like slowness, not breakage, and it reports nothing.
 
 **c. The preload helper is actively hostile to a render.** Every catalog loader is wrapped in
-`preload(() => import(chunk), deps, url)`, which fetches the component's stylesheet and *waits
-for it* before importing the module. In a render the stylesheets are linked from the manifest,
+`preload(() => import(chunk), deps, url)`, which fetches the component's stylesheet and _waits
+for it_ before importing the module. In a render the stylesheets are linked from the manifest,
 so that `<link>` is never going to load - and the loader sits on it while the page is
-serialized, so the components define *after* the html is written.
+serialized, so the components define _after_ the html is written.
 
 Both b and c are fixed the same way: the interceptor rewrites the module it serves, the way it
 already did for the mixed default/named import. `import.meta.resolve` is replaced with the
@@ -150,13 +150,13 @@ fallback it guards (identical resolution), and `()=>n(()=>import("…"),deps,url
 **d. The decide route emitted invalid html.** Its render returned
 `<decide-pages-product id=${id} sku=${sku}></decide-pages-product id=${id} sku=${sku}>` - an
 unquoted attribute that renders the string `"undefined"` when there is no sku, and an end tag
-carrying attributes, which the parser treats as *text*. In a browser this is invisible: the
+carrying attributes, which the parser treats as _text_. In a browser this is invisible: the
 component replaces its own children when it renders. In a render it is the difference between
 an element and an element with a stray text node, and it is what the pass had been quietly
 serving.
 
 **Lesson.** A build-time renderer turns every implicit runtime behaviour into an explicit
-dependency, and it fails *quietly*: a hang instead of an error, a placeholder instead of a
+dependency, and it fails _quietly_: a hang instead of an error, a placeholder instead of a
 crash, invalid html instead of a broken layout. When a render is wrong, isolate it down to the
 smallest html string that reproduces it - the `ceRenderToString` entry point exists for exactly
 that, and it is what found all four of these.
@@ -169,13 +169,13 @@ for a crawler, and it has to be replaced the moment the component mounts.
 
 It wasn't. Measured on the built page, after adding something to the cart:
 
-|                                    | prerendered | live                                |
-| ---------------------------------- | ----------- | ----------------------------------- |
-| `<checkout-pages-cart>` children    | 1           | **2**                               |
-| `.c_CartPage h2`                    | "Basket"    | `["Basket", "Basket"]`              |
-| `.c_CartPage__total`                | `Total: $0 Ø` | `["Total: $0 Ø", "Total: $5100 Ø"]` |
+|                                  | prerendered   | live                                |
+| -------------------------------- | ------------- | ----------------------------------- |
+| `<checkout-pages-cart>` children | 1             | **2**                               |
+| `.c_CartPage h2`                 | "Basket"      | `["Basket", "Basket"]`              |
+| `.c_CartPage__total`             | `Total: $0 Ø` | `["Total: $0 Ø", "Total: $5100 Ø"]` |
 
-The user reads the *first* ones, so the cart said "No items in cart".
+The user reads the _first_ ones, so the cart said "No items in cart".
 
 The cause is a difference between the three frameworks that nothing had forced into the open:
 **Svelte mounts a custom element by appending into its host**, while Preact and Vue replace it.
@@ -188,7 +188,7 @@ shadow root on any of these) and then calls the class's own `connectedCallback`,
 itself is untouched. It is applied to all seven checkout elements.
 
 **Lesson.** "The component upgrades the prerendered markup" is not a property of SSG, it is a
-property of the *framework* - and a page assembled from three of them has three answers, one of
+property of the _framework_ - and a page assembled from three of them has three answers, one of
 which silently appends. The other lesson is where to look: this was invisible in the build (31
 pages, no errors) and invisible in the pass's output (the markup was correct). It only showed up
 by counting nodes in the browser.
@@ -201,7 +201,7 @@ by counting nodes in the browser.
    is exactly what SSR frameworks read too.
 2. **Scope the css to what is in the document**, not to what the browser would fetch. Those
    differ: the browser only fetched the footer's css when the footer scrolled into view
-   (`loading="visible"`), but the footer's *markup* was already served - so its css had to be
+   (`loading="visible"`), but the footer's _markup_ was already served - so its css had to be
    linked anyway. Resolving from the markup's tags got this right by construction.
 3. **Total css was 22.4 kB raw / 4.5 kB gzipped for all 17 stylesheets.** Worth knowing before
    building machinery: for a store this size, "link everything" would have been a defensible
@@ -211,12 +211,12 @@ by counting nodes in the browser.
    its config into a worker, so the fetch interceptor (a function) forced
    `worker: { disable: true }`. Anything passed through a worker boundary has to be data.
 5. **Headless DOMs need their environment faked, deliberately.** `loading="visible"` can never
-   fire without layout, so those components never upgrade in a render. Stylesheet *loading* has
+   fire without layout, so those components never upgrade in a render. Stylesheet _loading_ has
    to be off (a render links its own), but switching it off alone makes every preload hang, so
    `handleDisabledFileLoadingAsSuccess` has to come with it. `document.write` order matters.
    Every one of these is a place where the render diverges from the browser.
 6. **Verify with the real build artifacts, not fixtures.** The test that matters most here is
-   the drift test: every tag the *built* explore catalog registers must resolve from the *real*
+   the drift test: every tag the _built_ explore catalog registers must resolve from the _real_
    manifest. It costs nothing and it fails the moment someone renames a convention.
 7. **Guards beat documentation for silent failures.** The pass now throws when a page uses a
    component no build declares, and warns when a component has no stylesheet. A page that
@@ -257,7 +257,7 @@ is produced, and everything else follows from that.
 - Crawlers and the first paint get real markup. The first paint is styled and complete, and it
   costs no javascript at all.
 - The components still upgrade in place, so interactivity and code-splitting are unchanged.
-- The prerender uses the *built* components, so it cannot drift from the app: the same chunks
+- The prerender uses the _built_ components, so it cannot drift from the app: the same chunks
   the browser loads produced the file.
 - Failures are build failures - an empty stage, an undeclared component, a missing manifest.
 - Pairs well with cross-document view transitions: navigation lands on real markup, so the
@@ -270,13 +270,10 @@ is produced, and everything else follows from that.
   shell fights the pass.
 - A prerendered page is a snapshot, and a page whose content depends on the visitor (the cart)
   is snapshotted empty. That is fine for the first paint and for a crawler, but the component
-  has to *replace* it on mount, which each framework does differently.
+  has to _replace_ it on mount, which each framework does differently.
 - Build-order coupling: teams before the shell, the shell before the pass.
 - Only the routes you enumerate exist. Everything else falls back to the shell and is rendered
   in the browser, so you run both modes at once.
-- Components the render can not load stay placeholders. The shell's design system is the one
-  left: its chunks import the shell entry, which the render must not boot, so `<ds-button>`
-  waits for the browser.
 - The render needs its own module rewrites (below). Every one of them is a happy-dom
   limitation, but they are still render-only behaviour that has to be maintained.
 

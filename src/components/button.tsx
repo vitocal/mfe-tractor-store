@@ -7,6 +7,7 @@ export type Variant = "primary" | "secondary" | string;
 export interface Props {
   href?: string;
   type?: JSX.IntrinsicElements["button"]["type"];
+  title?: string;
   value?: string;
   disabled?: boolean;
   rounded?: boolean;
@@ -25,6 +26,7 @@ const Button: FunctionalComponent<Props> = ({
   className = "",
   children,
   dataId,
+  title,
   variant = "secondary",
 }) => {
   const Tag = href ? "a" : "button";
@@ -43,6 +45,7 @@ const Button: FunctionalComponent<Props> = ({
       disabled={href ? undefined : disabled || undefined}
       href={href || undefined}
       type={href ? undefined : type}
+      title={title || undefined}
       value={value || undefined}
       data-id={dataId || undefined}
       class={classNames}

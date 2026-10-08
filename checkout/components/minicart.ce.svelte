@@ -1,4 +1,6 @@
-<svelte:options customElement={{ tag: "checkout-components-minicart", shadow: "none", extend: adoptPrerenderedMarkup }} />
+<svelte:options
+  customElement={{ tag: "checkout-components-minicart", shadow: "none", extend: adoptPrerenderedMarkup }}
+/>
 
 <script>
   import { adoptPrerenderedMarkup } from "../utils";

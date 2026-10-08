@@ -305,5 +305,6 @@ render-mode:not([mode]) {
 
 /* A prerendered page is the one worth pointing out, so it gets the brand colour */
 render-mode[mode="server"] {
-  background-color: #ff5a55;
+  background-color: #75bcff;
+  color: black;
 }
