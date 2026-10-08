@@ -1,5 +1,5 @@
 import CEAutoLoader from "ce-autoloader";
-import catalog from "./catalog";
+import { catalog } from "./catalog";
 
 import type { RenderMode } from "./components/ribbon";
 import type { Route } from "./router";
@@ -56,7 +56,23 @@ function showMode(mode: RenderMode): void {
     document.querySelector("render-mode")?.setAttribute("mode", mode);
 }
 
-window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
+/**
+ * The shell's loader, built once the teams' catalogs have arrived.
+ *
+ * `ce-autoloader` resolves a tag once: a tag it does not know is left in the document untouched,
+ * never retried. A prerendered page already holds every element by the time this runs, so the
+ * catalog has to be complete *before* the loader exists.
+ *
+ * The fetch is deliberately not awaited in the module body: `index.html` loads this script
+ * render-blocking, the markup is in the html already, and a script that waits for the teams would
+ * hold the first paint for them. The loader picks up whatever is in the document when it is built,
+ * so the routing below may run before or after it.
+ */
+async function load(): Promise<void> {
+    window.registry = new CEAutoLoader({ catalog: await catalog(), devErrors: false, hooks: { error: console.error } });
+}
+
+void load().catch((error) => console.error(error));
 
 /** The route this document was prerendered for, or null when it is a bare shell */
 const marker = document.documentElement.getAttribute(PRERENDERED_ATTRIBUTE);

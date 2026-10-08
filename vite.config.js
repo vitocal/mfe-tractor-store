@@ -1,12 +1,27 @@
 import { defineConfig } from "vite";
 
+import preloadCatalogs from "./scripts/preload-catalogs.ts";
 import stageTeamAssets from "./scripts/stage-team-assets.ts";
+import { TEAMS } from "./scripts/ssg-teams.ts";
 import ssg from "./scripts/ssg.ts";
 
 // Which site a build produces. Vite's `appType` is the switch: `spa` is the shell the browser
 // renders, `custom` means the build answers its own html and the prerender pass runs. `npm run
 // build` is the former; `npm run build:ssg` sets `APP_TYPE=ssr` for the latter.
 const appType = process.env.APP_TYPE === "ssr" ? "custom" : "spa";
+
+// The teams' published builds, as the urls the shell fetches them from at runtime - the same urls
+// the SSG's render reads (`scripts/ssg.ts`). They come from the one table of teams there is
+// (`scripts/ssg-teams.ts`), so a team added there is a team the shell loads and the pass writes
+// pages for. The shell's own code can not import that table, because it reads the filesystem, so
+// the values are handed to it here - the way `SPA_ROUTER` is below.
+const teamCatalogs = TEAMS.map((team) => `/${team.name}/dist/catalog.js`);
+const teamRoutes = TEAMS.map((team) => `/${team.name}/dist/routes.js`);
+
+// Whether the pages ask the browser for the teams' catalogs up front, in the same round trip as
+// the shell's own script. See `scripts/preload-catalogs.ts`; off by default, as it only moves
+// fetches around and the pages are correct either way.
+const preloadMitigation = process.env.PRELOAD_MITIGATION === "1";
 
 export default defineConfig({
   appType,
@@ -18,9 +33,16 @@ export default defineConfig({
     "import.meta.env.SPA_ROUTER": JSON.stringify(
       appType === "custom" ? "" : '<script type="module" src="/src/router-app.ts" blocking="render"></script>',
     ),
+    // The teams, as urls. `src/catalog.ts` and `src/routes.ts` fetch these instead of importing the
+    // teams' packages, which is what keeps a team's build out of the shell's bundle - see there.
+    "import.meta.env.TEAM_CATALOGS": JSON.stringify(teamCatalogs),
+    "import.meta.env.TEAM_ROUTES": JSON.stringify(teamRoutes),
   },
-  // plugins: [stageTeamAssets(), ssg()],
-  plugins: [ssg()],
+  plugins: [
+    stageTeamAssets(),
+    preloadCatalogs({ catalogs: teamCatalogs, enabled: preloadMitigation }),
+    ssg(),
+  ],
   build: {
     outDir: "dist/",
     sourcemap: true,
@@ -41,22 +63,8 @@ export default defineConfig({
       output: {
         format: "esm",
         exports: "auto",
-
         entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name].js",
-        // entryFileNames: "[name].js",
-
-        // The catalogs' own preload maps hold paths relative to the shell's root (they are read
-        // against the url of the module that carries them), so the chunk holding them sits beside
-        // `index.js` rather than under `chunks/`.
-        // chunkFileNames: (chunk) => (chunk.name === "team-catalogs" ? "[name].js" : "chunks/[name].js"),
-        // The teams' catalogs are pre-built: their own build already rendered every preload marker
-        // they contain. A chunk of their own asks Vite for no preloads at all, and Vite prepends its
-        // helper only to a chunk that asks for some - so the map a catalog carries is left alone,
-        // and the name it uses never meets the shell's copy of it.
-        // codeSplitting: {
-        //   groups: [{ name: "team-catalogs", test: /[\\/]dist[\\/]catalog\.js$/ }],
-        // },
       },
     },
   },

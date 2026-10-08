@@ -23,6 +23,14 @@ export interface ComponentBuild {
     tagFor(module: string): string | null;
     /** What the build emitted, keyed by module path */
     manifest: Manifest;
+    /**
+     * Where the build is served from, in front of the stylesheet paths its manifest declares.
+     *
+     * Empty for the shell's own build, which is the site itself. A team's build is served at
+     * `/<team>/dist/`, because that is where its own catalog is fetched from and resolves its
+     * stylesheets against - see `stage-team-assets.ts`.
+     */
+    urlPrefix: string;
 }
 
 /**
@@ -34,6 +42,7 @@ export interface ComponentBuild {
 export function teamBuild(prefix: string, extension: string, manifest: Manifest): ComponentBuild {
     return {
         manifest,
+        urlPrefix: `${prefix}/dist/`,
         tagFor(module) {
             if (!module.endsWith(extension)) return null;
 
@@ -53,6 +62,7 @@ export function teamBuild(prefix: string, extension: string, manifest: Manifest)
 export function designSystemBuild(manifest: Manifest): ComponentBuild {
     return {
         manifest,
+        urlPrefix: "",
         tagFor(module) {
             const component = /^src\/components\/([^/]+)\.tsx$/.exec(module);
 
@@ -72,9 +82,14 @@ export function tagsIn(html: string): string[] {
     return [...new Set([...html.matchAll(/<([a-z][a-z0-9]*-[a-z0-9-]*)[\s/>]/g)].map(([, tag]) => tag))];
 }
 
-/** `assets/index.css` -> `/assets/index.css`, so the url resolves from any page depth */
-function toUrl(file: string): string {
-    return `/${file.replace(/^\/+/, "")}`;
+/**
+ * `assets/index.css` -> `/assets/index.css`, so the url resolves from any page depth.
+ *
+ * `prefix` is where the build is served from: empty for the shell, `explore/dist/` for a team -
+ * whose stylesheets are emitted into its own build and fetched from there, not from the shell's.
+ */
+function toUrl(file: string, prefix = ""): string {
+    return `/${prefix}${file.replace(/^\/+/, "")}`;
 }
 
 /** tag -> the stylesheets that tag needs, for every component the given builds emit */
@@ -87,7 +102,7 @@ export function stylesByTag(builds: ComponentBuild[]): Map<string, string[]> {
             // `tagFor` answers null for those: only what its catalog globs can become a tag.
             const tag = build.tagFor(module);
 
-            if (tag) index.set(tag, (output.css ?? []).map(toUrl));
+            if (tag) index.set(tag, (output.css ?? []).map((file) => toUrl(file, build.urlPrefix)));
         }
     }
 

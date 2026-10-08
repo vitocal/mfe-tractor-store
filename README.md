@@ -365,11 +365,11 @@ reads it.
 
 Which is why turning a module into a custom element is the component's own business:
 
-| Team     | The module a catalog points at | Becomes a custom element by                       |
-| -------- | ------------------------------ | ------------------------------------------------- |
-| explore  | `pages/category.ce.tsx`        | registering itself when the module is imported    |
-| checkout | `pages/cart.ce.svelte`         | registering itself (`customElement: true`)        |
-| decide   | `pages/product.ce.ts`          | calling `asCustomElement` on the SFC next to it   |
+| Team     | The module a catalog points at | Becomes a custom element by                     |
+| -------- | ------------------------------ | ----------------------------------------------- |
+| explore  | `pages/category.ce.tsx`        | registering itself when the module is imported  |
+| checkout | `pages/cart.ce.svelte`         | registering itself (`customElement: true`)      |
+| decide   | `pages/product.ce.ts`          | calling `asCustomElement` on the SFC next to it |
 
 Vue's compiler owns an SFC's default export - it is the component options, not an element - so
 decide keeps a `<name>.ce.ts` beside each `<name>.ce.vue`, and the loaders resolve to the element
@@ -378,15 +378,21 @@ rather than the catalog's: `decide/dist/catalog.js` imports nothing but the comp
 the chunk holding Vue hangs off them. See [`decide/vue-ce.ts`](./decide/vue-ce.ts), and
 [`decide/test/catalog.test.ts`](./decide/test/catalog.test.ts), which holds the built catalog to it.
 
-A catalog is *published* as a build, though, and a build carries Vite's preload helper
-(`__vite__mapDeps`) for the chunks its loaders preload. The shell bundles those catalogs, and the
-chunk it builds is given a copy of that helper too - two declarations of one name in one module
-scope is a syntax error that takes the whole page down, including every prerendered one. So the
-catalogs are given a chunk of their own ([`vite.config.js`](./vite.config.js)): a pre-built module
-brings no preload marker of its own, Vite prepends its helper only to a chunk that has one, and the
-maps the catalogs carry are then named by the bundler among themselves, as they always were. That
-chunk sits beside `index.js` rather than under `chunks/`, because the paths inside those maps are
-read against the url of the module that carries them.
+A catalog is _published_ as a build, though, and the shell does not bundle it: `src/catalog.ts`
+fetches `/<team>/dist/catalog.js` at runtime, the same url the SSG's render and the bench read a
+team's build from. That is what makes the paths inside it hold - the preload map a catalog carries
+is written relative to the catalog's own url - and it leaves the shell's graph with no team code at
+all, so there is no second copy of a helper for the shell's own to collide with.
+[`scripts/stage-team-assets.ts`](./scripts/stage-team-assets.ts) copies each team's build under
+`/<team>/dist/` in the output, because the output is what gets deployed, and
+[`scripts/preload-catalogs.ts`](./scripts/preload-catalogs.ts) - on with `PRELOAD_MITIGATION=1` -
+asks the browser for those catalogs in the same round trip as the shell's own script, so fetching
+them costs no extra hop.
+
+### preloading
+
+without catalog preloading: FCP in 114ms, LCP in 1000ms
+with catalog preloading: FCP in 90-100ms, LCP in 1000ms.
 
 ## Testing
 

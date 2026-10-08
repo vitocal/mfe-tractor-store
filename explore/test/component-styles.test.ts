@@ -85,7 +85,7 @@ describe("component styles", () => {
 
   describe("stylesByTag", () => {
     it("maps a component to the stylesheet its build emitted", () => {
-      assert.deepEqual(stylesByTag([demoBuild]).get("demo-pages-home"), ["/assets/home-abc.css"]);
+      assert.deepEqual(stylesByTag([demoBuild]).get("demo-pages-home"), ["/demo/dist/assets/home-abc.css"]);
     });
 
     it("leaves out the modules that are not components", () => {
