@@ -1,6 +1,7 @@
 import { createRouter } from "./router";
-import routes from "./routes";
 import type { RenderMode } from "./components/ribbon";
+
+import routes from "./routes";
 
 /**
  * The SPA shell.
@@ -15,6 +16,12 @@ import type { RenderMode } from "./components/ribbon";
 
 const stage = document.querySelector("vi-router");
 
+const notFound = { name: "not-found", path: "*", render: () => `<h1>404 Not Found</h1>` };
+const router = createRouter(routes, { notFound });
+
+stage.innerHTML = router.render(location.pathname + location.search)?.html ?? "";
+
+
 /**
  * Says how the markup on screen was produced - see `./components/ribbon.ts`. The ribbon is the shell's own
  * custom element (`<render-mode>`), carried by `index.html`; only the shell knows the mode, so it
@@ -23,9 +30,4 @@ const stage = document.querySelector("vi-router");
 function showMode(mode: RenderMode): void {
     document.querySelector("render-mode")?.setAttribute("mode", mode);
 }
-
-const notFound = { name: "not-found", path: "*", render: () => `<h1>404 Not Found</h1>` };
-const router = createRouter(routes, { notFound });
-
-stage.innerHTML = router.render(location.pathname + location.search)?.html ?? "";
 showMode("client");

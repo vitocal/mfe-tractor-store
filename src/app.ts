@@ -1,5 +1,6 @@
 import CEAutoLoader from "ce-autoloader";
 import catalog from "./catalog";
+
 import type { RenderMode } from "./components/ribbon";
 import type { Route } from "./router";
 
@@ -55,7 +56,7 @@ function showMode(mode: RenderMode): void {
     document.querySelector("render-mode")?.setAttribute("mode", mode);
 }
 
-new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
+window.registry = new CEAutoLoader({ catalog, devErrors: false, hooks: { error: console.error } });
 
 /** The route this document was prerendered for, or null when it is a bare shell */
 const marker = document.documentElement.getAttribute(PRERENDERED_ATTRIBUTE);

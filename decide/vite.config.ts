@@ -27,12 +27,12 @@ export default defineConfig({
         'catalog': './catalog.ts',
         'routes': './routes.ts'
       },
+
       // Ensure entry point exports are treated as public module exports
       preserveEntrySignatures: "allow-extension",
 
       output: {
         format: "esm",
-        keepNames: true,
         exports: "auto",
         entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name].js",

@@ -27,7 +27,6 @@ export default defineConfig({
 
       output: {
         format: "esm",
-        keepNames: true,
         exports: "auto",
         entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name].js",

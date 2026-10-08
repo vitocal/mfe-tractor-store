@@ -378,6 +378,16 @@ rather than the catalog's: `decide/dist/catalog.js` imports nothing but the comp
 the chunk holding Vue hangs off them. See [`decide/vue-ce.ts`](./decide/vue-ce.ts), and
 [`decide/test/catalog.test.ts`](./decide/test/catalog.test.ts), which holds the built catalog to it.
 
+A catalog is *published* as a build, though, and a build carries Vite's preload helper
+(`__vite__mapDeps`) for the chunks its loaders preload. The shell bundles those catalogs, and the
+chunk it builds is given a copy of that helper too - two declarations of one name in one module
+scope is a syntax error that takes the whole page down, including every prerendered one. So the
+catalogs are given a chunk of their own ([`vite.config.js`](./vite.config.js)): a pre-built module
+brings no preload marker of its own, Vite prepends its helper only to a chunk that has one, and the
+maps the catalogs carry are then named by the bundler among themselves, as they always were. That
+chunk sits beside `index.js` rather than under `chunks/`, because the paths inside those maps are
+read against the url of the module that carries them.
+
 ## Testing
 
 Every team has its own runner, and they are run from the team folder:
