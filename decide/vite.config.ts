@@ -34,8 +34,9 @@ export default defineConfig({
       output: {
         format: "esm",
         exports: "auto",
+        // `catalog.js` and `routes.js` are fetched by url at runtime, so they keep their names.
         entryFileNames: "[name].js",
-        chunkFileNames: "chunks/[name].js",
+        chunkFileNames: "chunks/[name]-[hash].js",
       },
       treeshake: {
         moduleSideEffects: "no-external",

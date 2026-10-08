@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 
+import cacheHeaders from "./scripts/cache-headers.ts";
 import preloadCatalogs from "./scripts/preload-catalogs.ts";
 import stageTeamAssets from "./scripts/stage-team-assets.ts";
 import { TEAMS } from "./scripts/ssg-teams.ts";
@@ -23,22 +24,63 @@ const teamRoutes = TEAMS.map((team) => `/${team.name}/dist/routes.js`);
 // fetches around and the pages are correct either way.
 const preloadMitigation = process.env.PRELOAD_MITIGATION === "1";
 
+// How long a browser may keep what it fetches. See `scripts/cache-headers.ts`, which turns this
+// into a `_headers` file for Cloudflare Pages and into the same headers on `vite preview`.
+
+/** The name is a content hash, so it changes with the content: a year is safe. */
+const YEAR = "public, max-age=31536000, immutable";
+
+/** A release pointer, or an asset that keeps its name: an hour, then ask again. */
+const HOUR = "public, max-age=3600";
+
+/**
+ * What a request is served with, by path. First match wins; a path that is neither listed here nor a
+ * page keeps Cloudflare Pages' own default.
+ */
+export const CACHE = {
+  /** A page is the markup of a release, so it is never used without revalidating. */
+  page: "no-cache, must-revalidate",
+
+  rules: [
+    // Fingerprinted by the build, so the name changes when the content does.
+    { path: "/assets/*", cache: YEAR },
+    { path: "/chunks/*", cache: YEAR },
+    { path: "/entries/*", cache: YEAR },
+
+    // Each team's build, at the paths the shell fetches it from. The hour is what lets a team
+    // release without the shell being rebuilt - and it is only safe while the previous release's
+    // fingerprinted files are still served, because a catalog names the stylesheets *it* compiled.
+    ...TEAMS.flatMap(({ name }) => [
+      { path: `/${name}/dist/assets/*`, cache: YEAR },
+      { path: `/${name}/dist/chunks/*`, cache: YEAR },
+      { path: `/${name}/dist/catalog.js`, cache: HOUR },
+      { path: `/${name}/dist/routes.js`, cache: HOUR },
+    ]),
+
+    // Names that stay put.
+    { path: "/catalog.js", cache: HOUR },
+    { path: "/cdn/*", cache: HOUR },
+    { path: "/robots.txt", cache: HOUR },
+    { path: "/llms.txt", cache: HOUR },
+  ],
+};
+
 export default defineConfig({
   appType,
-  // The full router is a script of its own, present in the SPA build only. `index.html` carries
-  // a `%SPA_ROUTER%` placeholder, which Vite's html env hook fills from this define (keys under
-  // `import.meta.env.` are exposed to `%NAME%` in html). An SSR build replaces it with nothing,
-  // so neither the page nor the SSR bundle carries the router.
   define: {
     "import.meta.env.SPA_ROUTER": JSON.stringify(
       appType === "custom" ? "" : '<script type="module" src="/src/router-app.ts" blocking="render"></script>',
     ),
-    // The teams, as urls. `src/catalog.ts` and `src/routes.ts` fetch these instead of importing the
-    // teams' packages, which is what keeps a team's build out of the shell's bundle - see there.
+    // The teams catalogs as urls
     "import.meta.env.TEAM_CATALOGS": JSON.stringify(teamCatalogs),
     "import.meta.env.TEAM_ROUTES": JSON.stringify(teamRoutes),
   },
-  plugins: [stageTeamAssets(), preloadCatalogs({ catalogs: teamCatalogs, enabled: preloadMitigation }), ssg()],
+  plugins: [
+    stageTeamAssets(),
+    preloadCatalogs({ catalogs: teamCatalogs, enabled: preloadMitigation }),
+    ssg(),
+    cacheHeaders(CACHE),
+  ],
   build: {
     outDir: "dist/",
     sourcemap: true,
@@ -51,7 +93,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: "./index.html",
-        catalog: "./src/catalog.ts",
       },
       // Ensure entry point exports are treated as public module exports
       preserveEntrySignatures: "exports-only",
@@ -59,8 +100,9 @@ export default defineConfig({
       output: {
         format: "esm",
         exports: "auto",
-        entryFileNames: "[name].js",
-        chunkFileNames: "chunks/[name].js",
+        // `catalog` is the shell's published catalog - a release pointer, so it keeps its name.
+        entryFileNames: (chunk) => (chunk.name === "catalog" ? "[name].js" : "entries/[name]-[hash].js"),
+        chunkFileNames: "chunks/[name]-[hash].js",
       },
     },
   },

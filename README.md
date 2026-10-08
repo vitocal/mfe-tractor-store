@@ -389,10 +389,69 @@ all, so there is no second copy of a helper for the shell's own to collide with.
 asks the browser for those catalogs in the same round trip as the shell's own script, so fetching
 them costs no extra hop.
 
+That stable url is also why a catalog is the one thing that must never be served from a cache: a
+cached catalog is a release that never arrives, and a stale one names stylesheets the release has
+already replaced. See [Caching and releases](#caching-and-releases).
+
 ### preloading
 
 without catalog preloading: FCP in 114ms, LCP in 1000ms
 with catalog preloading: FCP in 90-100ms, LCP in 1000ms.
+
+## Caching and releases
+
+Each team publishes on its own schedule, so a browser that has cached a file has to be told how long
+it may keep it. The answer follows from one question - **does the file's name change when its content
+does?**
+
+| Class                    | Example                                    | Served with                           |
+| ------------------------ | ------------------------------------------ | ------------------------------------- |
+| Fingerprinted            | `/chunks/button-<hash>.js`, `/entries/index-<hash>.js`, `/explore/dist/assets/category-<hash>.css` | `public, max-age=31536000, immutable` |
+| Release pointers         | `/explore/dist/catalog.js`, `/…/routes.js`, `/catalog.js` | `public, max-age=3600`      |
+| Unhashed static          | `/cdn/**`, `/robots.txt`, `/llms.txt`      | `public, max-age=3600`                |
+| Every page               | `/products`, `/checkout/cart`              | `no-cache, must-revalidate`           |
+
+Everything else keeps Cloudflare Pages' own default, `public, max-age=0, must-revalidate` with an
+ETag. Pages **merges** the headers of every rule a request matches rather than stopping at the first,
+so there is deliberately no catch-all rule in `dist/_headers` to fight with the immutable ones.
+
+Which is why the chunks carry a hash at all (`chunkFileNames` in each team's `vite.config.ts` and in
+the shell's). The catalog names every chunk and stylesheet it loads, so a release that changes one
+points at a *new* file, and the old one can be kept for a year without anyone invalidating anything.
+The javascript was the whole of the uncacheable directory: only the stylesheets were fingerprinted
+before this.
+
+### Why a catalog gets an hour and not a year
+
+A team's `catalog.js` is fetched by url at runtime ([`src/catalog.ts`](./src/catalog.ts)), and that
+url *not* changing is what lets a team release without the shell being rebuilt. So the hour is what
+that independence costs, and it is only safe while the previous release's fingerprinted files are
+still served: a catalog carries the preload map of the release that wrote it, the preload helper
+*waits for* each stylesheet it names, and a missing one rejects the loader - so the component is never
+defined, and `ce-autoloader` resolves a tag once and never retries
+([`src/app.ts`](./src/app.ts)). The html is `no-cache` for the same reason in reverse: a page is the
+markup of the release that wrote it.
+
+### Where the rules live
+
+- The `CACHE` config in [`vite.config.js`](./vite.config.js) is the table: a path, and what a request
+  for it is served with. Its team rules are generated from the one list of teams there is
+  ([`scripts/ssg-teams.ts`](./scripts/ssg-teams.ts)), so a team added there is a team whose assets are
+  cached correctly.
+- [`scripts/cache-headers.ts`](./scripts/cache-headers.ts) turns it into `dist/_headers` for Pages -
+  one rule per page, taken from the html the pass wrote - and sends the same headers on `vite preview`,
+  which sends `no-cache` for everything of its own accord. Without that the rules would only be
+  visible after a deploy.
+
+The plugin is listed **last** in `vite.config.js`, because it describes the output and so has to run
+after the teams are staged and the pages are prerendered.
+
+### The guard
+
+A rule that says `immutable` is a promise about a *url*, and only a hash of the content can make it
+honestly. So the build holds the output to it: every file under a directory the policy calls cacheable
+must carry one, and the build fails naming the file that does not. Nothing else would notice -
+development caches nothing, and the file is on disk either way.
 
 ## Testing
 
@@ -452,3 +511,15 @@ To publish a single team work, run `npm run build` inside the team folder (eg: [
 
 - **Per-route head tags.** Every prerendered page carries the shell's single `<title>`. There
   are no per-route titles, descriptions, canonicals or structured data yet.
+- **A deploy does not keep the previous release's files.** A Cloudflare Pages deploy replaces the
+  whole asset set - its per-data-center copies have a one-week TTL and can disappear at any time - so
+  a browser holding the previous release's catalog (up to an hour, see
+  [Caching and releases](#caching-and-releases)) can ask for a hashed chunk or stylesheet that is no
+  longer there. The preload helper then rejects and the component never defines. Keeping the last few
+  releases' fingerprinted files would close it, and nothing in the build does that yet.
+- **A page's markup is only as new as the shell build.** Teams release their code independently, but
+  a prerendered page is the markup of the releases that existed when the pass ran, so picking up a
+  team's markup change still needs the shell rebuilt. See [Caching and releases](#caching-and-releases).
+- **Sourcemaps are deployed.** `sourcemap: true` puts them in `dist/`, where they are served like
+  anything else, so the shell's source is public. [`scripts/stage-team-assets.ts`](./scripts/stage-team-assets.ts)
+  deliberately does not stage a team's.
