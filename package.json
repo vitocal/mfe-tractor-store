@@ -2,6 +2,8 @@
   "name": "@mfe-store",
   "private": true,
   "version": "0.0.0",
+  "description": "A non-trivial micro-frontends example store: lazy-loaded web components from three independently deployed teams, in three frameworks",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

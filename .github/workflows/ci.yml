@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Every team's suite builds the team first, and renders every page it publishes through the
+      # SSG's own renderer - see README.md, "Testing".
+      - run: npm test
+
+      # The prerender pass and the caching guard both run here: a page that stops rendering, or a
+      # directory served for a year that stops hashing, fails the build.
+      - run: npm run build:ssg

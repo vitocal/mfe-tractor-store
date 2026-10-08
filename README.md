@@ -523,3 +523,9 @@ To publish a single team work, run `npm run build` inside the team folder (eg: [
 - **Sourcemaps are deployed.** `sourcemap: true` puts them in `dist/`, where they are served like
   anything else, so the shell's source is public. [`scripts/stage-team-assets.ts`](./scripts/stage-team-assets.ts)
   deliberately does not stage a team's.
+
+## License
+
+[MIT](./LICENSE) for the code. The art in [`public/cdn/img`](./public/cdn/img) is placeholder imagery
+- product and store photography, and brand marks - bundled so the example looks like a real store. It
+is somebody else's, and the MIT license does not cover it.

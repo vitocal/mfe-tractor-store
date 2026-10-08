@@ -1,7 +1,10 @@
 node_modules/
 .vscode/
-package-lock.json
 **/dist/
 reports/
+
+# The workspace lockfile is the one CI installs from. The per-team ones are artifacts of running
+# `npm install` inside a team folder - a team published on its own would carry its own.
+/*/package-lock.json
 
 explore/public/cdn
