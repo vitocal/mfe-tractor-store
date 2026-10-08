@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "description": "A non-trivial micro-frontends example store: lazy-loaded web components from three independently deployed teams, in three frameworks",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vitocal/mfe-tractor-store.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
