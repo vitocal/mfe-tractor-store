@@ -38,11 +38,7 @@ export default defineConfig({
     "import.meta.env.TEAM_CATALOGS": JSON.stringify(teamCatalogs),
     "import.meta.env.TEAM_ROUTES": JSON.stringify(teamRoutes),
   },
-  plugins: [
-    stageTeamAssets(),
-    preloadCatalogs({ catalogs: teamCatalogs, enabled: preloadMitigation }),
-    ssg(),
-  ],
+  plugins: [stageTeamAssets(), preloadCatalogs({ catalogs: teamCatalogs, enabled: preloadMitigation }), ssg()],
   build: {
     outDir: "dist/",
     sourcemap: true,

@@ -54,9 +54,16 @@ p {
   border-radius: 0.5rem;
 
   /* Loading states */
+  /**
+   * `:empty` is the point of this selector: a component with nothing on screen yet is loading, and
+   * one the prerender filled in is not - the loader is only replacing what is already there. On a
+   * prerendered page every element arrives with its markup, so without it the page a visitor is
+   * reading fades to a quarter opacity and gets a shimmer swept over it, for as long as the
+   * component's chunk takes to arrive.
+   */
   &[ce="loading"] {
     cursor: wait;
-    background-color: var(--bg-color);
+    background-color: transparent;
     transition: background-color 0.1s ease-in-out;
 
     &::after {
@@ -110,7 +117,10 @@ p {
 
 .tractor-app {
   width: 100dvw;
-  height: 100dvh;
+  min-height: 100dvh;
+  height: auto;
+  display: block;
+  padding: 0;
 }
 
 /**
@@ -120,7 +130,14 @@ vi-router {
   > *:not(:defined) {
     display: block;
     width: 100%;
-    height: 100%;
+    min-height: 100dvh;
+    height: auto;
+    padding: 0;
+
+    &::after {
+      filter: blur(2px);
+      animation: none;
+    }
   }
 
   & main {
@@ -147,31 +164,12 @@ vi-router {
   }
 }
 
-[ce] {
-}
-
+/**
+ * The cursor says "not interactive yet", which is true of any element whose component is still
+ * loading: the markup may be on screen, but nothing inside it responds.
+ */
 [ce="loading"] {
   cursor: wait;
-  background-color: transparent;
-  opacity: 0.25;
-
-  transition: translate, opacity, background-color;
-  transition-duration: 0.5s;
-  transition-timing-function: ease;
-
-  &::after {
-    pointer-events: none;
-    content: " ";
-    position: absolute;
-    inset: 0;
-
-    transform: translateX(-100%);
-    width: 100%;
-
-    background: linear-gradient(to right, transparent 10%, var(--color-bg-dark) 50%, transparent 90%);
-    will-change: transform;
-    animation: shimmer 2.5s ease-in-out infinite;
-  }
 }
 
 [ce="defined"] {
@@ -206,6 +204,18 @@ vi-router {
   .appear-staggered {
     animation-delay: calc((sibling-index() - 1) * 133ms);
   }
+}
+
+/**
+ * A prerendered page has nothing to appear: its markup was in the html from the first byte.
+ *
+ * These animations start at `opacity: 0` and carry `animation-fill-mode: both`, so replaying them
+ * takes the page away and brings it back - and on a slow connection they fire seconds late, when
+ * the component's chunk finally lands, over content the visitor is already reading. The marker is
+ * on `<html>` for exactly this kind of question - see `scripts/prerendered.ts`.
+ */
+:root[data-appear="true"][data-prerendered] .appear[ce="defined"] {
+  animation: none;
 }
 
 .appear-always {
