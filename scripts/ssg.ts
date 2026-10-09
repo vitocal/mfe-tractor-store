@@ -32,6 +32,7 @@ import { createRouter } from "../src/router.ts";
 import type { Route } from "../src/router.ts";
 import { markPrerendered, withRoute, withoutRoute } from "./prerendered.ts";
 import { CE_ORIGIN, ceRenderPages } from "./ce-render.ts";
+import { chunksByTag, chunksForTags, withModulePreloads, withoutModulePreloads } from "./component-chunks.ts";
 import {
   designSystemBuild,
   stylesByTag,
@@ -129,15 +130,18 @@ async function readManifest(distDir: string, build: string): Promise<Manifest> {
 }
 
 /**
- * Which stylesheet each component of every build needs.
+ * Every build a page's tags can name: the shell's design system, and each team's.
  *
  * The shell's build contributes styles but no components to load. Its design system compiles
  * into chunks that import the shell entry (`chunks/button.js` starts with
  * `import … from "../index.js"`), and the entry is exactly what the render must not run - so a
  * `<ds-button>` keeps its placeholder in the prerendered markup and the browser fills it in.
  * Its stylesheet is linked all the same, so that placeholder is styled while it waits.
+ *
+ * Read once and asked twice: the stylesheets a tag needs (`component-styles.ts`) and the
+ * javascript it needs (`component-chunks.ts`) are the same index of the same manifests.
  */
-async function readStyleIndex(shellDir: string): Promise<Map<string, string[]>> {
+async function readBuilds(shellDir: string): Promise<ComponentBuild[]> {
   const builds: ComponentBuild[] = [designSystemBuild(await readManifest(shellDir, "shell"))];
 
   for (const team of TEAMS) {
@@ -146,7 +150,7 @@ async function readStyleIndex(shellDir: string): Promise<Map<string, string[]>> 
     builds.push(teamBuild(team.name, team.extension, manifest));
   }
 
-  return stylesByTag(builds);
+  return builds;
 }
 
 /**
@@ -190,8 +194,10 @@ export async function readShell(shellDir: string = OUTPUT_DIR): Promise<string> 
   try {
     // The pass writes the root page over the shell html, so a narrowed run reads a page back
     // instead of the shell. Drop the blocks a previous run added, or every page would inherit
-    // the root page's stylesheets and route on top of its own.
-    const shell = withoutRoute(withoutStylesheets(await FS.readFile(file, "utf8")));
+    // the root page's stylesheets, preloads and route on top of its own.
+    const shell = withoutRoute(
+      withoutStylesheets(withoutModulePreloads(await FS.readFile(file, "utf8"))),
+    );
 
     return withExplicitHead(shell);
   } catch {
@@ -230,6 +236,8 @@ export interface SsgPage {
   outputFile: string;
   /** Stylesheets linked into the page, in the order they were written */
   styles: string[];
+  /** Chunks preloaded into the page, so its components need no round trip of their own */
+  chunks: string[];
   /** Size of the written file in bytes */
   bytes: number;
 }
@@ -303,7 +311,9 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
   if (!teams.length) throw new Error(`No team to prerender: ${wanted.join(", ") || "none named"}`);
 
   const template = await readShell(outputDirectory);
-  const styles = await readStyleIndex(outputDirectory);
+  const builds = await readBuilds(outputDirectory);
+  const styles = stylesByTag(builds);
+  const chunks = chunksByTag(builds);
   const items: Page[] = [];
 
   for (const team of teams) {
@@ -370,12 +380,21 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
 
     unstyled.forEach((tag) => unstyledTags.add(tag));
 
+    // The components' chunks, and what those chunks import. The markup is in the document from the
+    // first byte, but the javascript behind it is only discoverable through the team catalogs - so
+    // without this the page waits a round trip for the catalog and another for each chunk behind
+    // it. See `component-chunks.ts`.
+    const pageChunks = chunksForTags(chunks, tags);
+
     // The markup is already in the document, so its stylesheets have to be too. Left to the
     // loader they arrive with the javascript, which paints the page unstyled first.
     //
     // The marker is how the shell knows this page already holds its route's markup, so it can
     // leave it alone instead of rendering the same route over it.
-    const marked = markPrerendered(withStylesheets(withRoute(page, item.route), pageStyles), item.path);
+    const marked = markPrerendered(
+      withStylesheets(withModulePreloads(withRoute(page, item.route), pageChunks), pageStyles),
+      item.path,
+    );
     const file = Path.join(outputDirectory, item.outputFile);
 
     // Nothing has written the file yet, so its directory is made here.
@@ -388,6 +407,7 @@ export async function generate(options: SsgOptions = {}): Promise<SsgResult> {
       url: item.url,
       outputFile: file,
       styles: pageStyles,
+      chunks: pageChunks,
       bytes: marked.length,
     });
   }
@@ -402,8 +422,11 @@ function report({ pages, unstyled, outputDirectory }: SsgResult, root: string): 
   for (const page of pages) {
     const file = Path.relative(root, page.outputFile);
     const css = `${page.styles.length} css`;
+    const js = `${page.chunks.length} preload`;
 
-    console.log(`[ssg] + ${page.path} -> ${file} (${(page.bytes / 1024).toFixed(1)} kB, ${css})`);
+    console.log(
+      `[ssg] + ${page.path} -> ${file} (${(page.bytes / 1024).toFixed(1)} kB, ${css}, ${js})`,
+    );
   }
 
   if (unstyled.length) {

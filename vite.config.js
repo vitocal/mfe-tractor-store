@@ -20,9 +20,14 @@ const teamCatalogs = TEAMS.map((team) => `/${team.name}/dist/catalog.js`);
 const teamRoutes = TEAMS.map((team) => `/${team.name}/dist/routes.js`);
 
 // Whether the pages ask the browser for the teams' catalogs up front, in the same round trip as
-// the shell's own script. See `scripts/preload-catalogs.ts`; off by default, as it only moves
-// fetches around and the pages are correct either way.
-const preloadMitigation = process.env.PRELOAD_MITIGATION === "1";
+// the shell's own script. See `scripts/preload-catalogs.ts`.
+//
+// On by default. The pages are correct either way - this only moves fetches around - but the
+// fetches are not: the shell discovers its teams at runtime, so without this the catalogs, and
+// every component behind them, are two round trips behind the shell's own script. Those round
+// trips are the whole of what a navigation costs on a prerendered page, whose markup was already
+// complete. `PRELOAD_MITIGATION=0` turns it off, which is what a comparison run wants.
+const preloadMitigation = process.env.PRELOAD_MITIGATION !== "0";
 
 // How long a browser may keep what it fetches. See `scripts/cache-headers.ts`, which turns this
 // into a `_headers` file for Cloudflare Pages and into the same headers on `vite preview`.
@@ -39,7 +44,7 @@ const HOUR = "public, max-age=3600";
  */
 export const CACHE = {
   /** A page is the markup of a release, so it is never used without revalidating. */
-  page: "no-cache, must-revalidate",
+  page: "no-cache, must-revalidate, stale-while-revalidate",
 
   rules: [
     // Fingerprinted by the build, so the name changes when the content does.

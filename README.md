@@ -175,15 +175,19 @@ npm run build:ssg
 ```
 
 ```
-[ssg] + / -> dist/index.html (7.5 kB, 6 css)
-[ssg] + /products -> dist/products.html (15.9 kB, 5 css)
-[ssg] + /products/classic -> dist/products/classic.html (12.1 kB, 5 css)
-[ssg] + /stores -> dist/stores.html (6.1 kB, 5 css)
-[ssg] + /product/AU-01 -> dist/product/AU-01.html (8.6 kB, 8 css)
-[ssg] + /checkout/cart -> dist/checkout/cart.html (7.1 kB, 6 css)
+[ssg] + / -> dist/index.html (8.3 kB, 6 css, 10 preload)
+[ssg] + /products -> dist/products.html (16.6 kB, 5 css, 9 preload)
+[ssg] + /products/classic -> dist/products/classic.html (12.9 kB, 5 css, 9 preload)
+[ssg] + /stores -> dist/stores.html (6.8 kB, 5 css, 9 preload)
+[ssg] + /product/AU-01 -> dist/product/AU-01.html (9.9 kB, 8 css, 14 preload)
+[ssg] + /checkout/cart -> dist/checkout/cart.html (8.1 kB, 6 css, 12 preload)
 …
 [ssg] done, 31 pages written to dist
 ```
+
+The two counts are what the page links and preloads on top of the shell: the stylesheets its
+components need (see [Stylesheets](#stylesheets)) and the chunks behind them (see
+[preloading](#preloading)).
 
 Pages are written next to the shell build, one html file per route, named after it, so a static
 server can serve them as they are: `/products/classic` is `dist/products/classic.html`.
@@ -249,10 +253,15 @@ all - `appType: "spa"` already serves the shell for every route there.
 - Because every one of those paths takes the prerendered elements out and puts new ones in, **an
   element a component owns can not be captured by a view transition.** A transition is aborted
   outright as soon as an element carrying a `view-transition-name` leaves the document, so the morph
-  is lost the moment the component mounts. Naming an element outside a component's render root, or
-  hydrating the component (Vue, above), is what keeps it - and
+  is lost the moment the component mounts. The shell's answer is to not mount during one: on a
+  prerendered page it waits for the incoming transition before it builds the loader at all
+  (`transitionFinished` in [`src/app.ts`](./src/app.ts)), so the page arrives, fades, and *then*
+  upgrades. An SPA page renders its own markup, so it has nothing to arrive and upgrades at once.
+  Naming an element outside a component's render root, or hydrating the component (Vue, above), is
+  the other half of the answer - and
   [`public/cdn/js/cls-tracker.js`](./public/cdn/js/cls-tracker.js) reports which captured elements a
-  page replaced, from its `pageswap`/`pagereveal` half. The same replacement is why
+  page replaced, from its `pageswap`/`pagereveal` half, which is how the wait above was found to be
+  necessary. The same replacement is why
   [`src/styles.css`](./src/styles.css) switches the `appear-*` animations off on a prerendered page:
   they start at `opacity: 0`, so replaying them takes the page away and brings it back.
 - A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
@@ -378,6 +387,12 @@ convention), and warns when a component's build declares no stylesheet at all. A
 every namespace - `<vi-router>`, a third party element - is somebody else's business and is
 left alone.
 
+The same manifest answers the javascript half of the question, and
+[`component-chunks.ts`](./scripts/component-chunks.ts) asks it: each of the page's tags, its chunk,
+and what that chunk statically imports, linked as `modulepreload`. Same marker discipline, same
+reason - the pass writes the root page over the shell, so a rerun has to be able to drop the block
+it added. See [preloading](#preloading) for what the two together are worth.
+
 ### Catalogs
 
 A catalog is a lookup table and nothing else: a tag on one side, the loader that resolves it on the
@@ -408,9 +423,10 @@ is written relative to the catalog's own url - and it leaves the shell's graph w
 all, so there is no second copy of a helper for the shell's own to collide with.
 [`scripts/stage-team-assets.ts`](./scripts/stage-team-assets.ts) copies each team's build under
 `/<team>/dist/` in the output, because the output is what gets deployed, and
-[`scripts/preload-catalogs.ts`](./scripts/preload-catalogs.ts) - on with `PRELOAD_MITIGATION=1` -
-asks the browser for those catalogs in the same round trip as the shell's own script, so fetching
-them costs no extra hop.
+[`scripts/preload-catalogs.ts`](./scripts/preload-catalogs.ts) - on by default, `PRELOAD_MITIGATION=0`
+to turn it off - asks the browser for those catalogs in the same round trip as the shell's own
+script, so fetching them costs no extra hop. See [preloading](#preloading) for the round trips that
+removes, and for the per-page chunk preloads that go with it.
 
 That stable url is also why a catalog is the one thing that must never be served from a cache: a
 cached catalog is a release that never arrives, and a stale one names stylesheets the release has
@@ -418,8 +434,36 @@ already replaced. See [Caching and releases](#caching-and-releases).
 
 ### preloading
 
-without catalog preloading: FCP in 114ms, LCP in 1000ms
-with catalog preloading: FCP in 90-100ms, LCP in 1000ms.
+The shell fetches its teams at runtime, and a team's catalog loads its components lazily, so
+nothing in the document names the files a page needs. Left to the browser, that is a chain of
+round trips: the shell's script, then the catalogs it discovers when it runs, then the chunks
+behind those, then whatever the chunks import. On a prerendered page - whose markup was complete
+from the first byte - that chain is the whole of what a navigation costs.
+
+Two passes flatten it, and both are on by default:
+
+- [`scripts/preload-catalogs.ts`](./scripts/preload-catalogs.ts) preloads the three team catalogs,
+  which every page needs and which only `src/catalog.ts` knows the urls of. `PRELOAD_MITIGATION=0`
+  turns it off.
+- [`scripts/component-chunks.ts`](./scripts/component-chunks.ts) resolves each page's tags against
+  the builds' manifests and preloads the chunks behind them - the page's own components, plus what
+  those chunks statically import. It is the javascript half of what
+  [`component-styles.ts`](./scripts/component-styles.ts) does for stylesheets.
+
+Measured on `/products`, Chrome's own network dependency tree, Fast 3G with 4× CPU throttling:
+
+|                       | max critical path latency | chain depth |
+| --------------------- | ------------------------- | ----------- |
+| catalog preload only  | 1,210 ms                  | 4           |
+| both, by default      | 874 ms                    | 1           |
+
+Depth is the number that matters more than the total: at depth 1 every request is a child of the
+document and they all fly at once, and the remaining 874 ms is the font the browser chooses to
+wait for, not a dependency.
+
+The catalog preload used to be opt-in, on the strength of a measurement taken on localhost - FCP
+114 ms without it, 90-100 ms with - where a round trip costs nothing and so it could only ever look
+like noise. On a real connection the round trip it removes is a third of a navigation.
 
 ## Caching and releases
 

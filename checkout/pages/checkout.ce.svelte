@@ -45,7 +45,7 @@
 
 <div data-boundary-page="checkout" class="page">
   <checkout-components-compactheader></checkout-components-compactheader>
-  <main class="c_Checkout">
+  <main class="c_Checkout" id="main">
     <h2>Checkout</h2>
     <form class="c_Checkout__form" bind:this={formElement} on:input={validateForm} on:submit={handleSubmit}>
       <h3>Personal Data</h3>

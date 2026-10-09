@@ -48,7 +48,7 @@
 
 <div data-boundary-page="checkout" class="page">
   <explore-components-header></explore-components-header>
-  <main class="c_Thanks">
+  <main class="c_Thanks" id="main">
     <h2 class="c_Thanks__title">Thanks for your order!</h2>
     <p class="c_Thanks__text">We'll notify you, when its ready for pickup.</p>
 

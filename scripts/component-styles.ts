@@ -14,8 +14,21 @@
  * so a build says how, and this module does the rest.
  */
 
-/** A Vite build manifest: the modules a build emitted, and the stylesheets they need */
-export type Manifest = Record<string, { file: string; css?: string[] }>;
+/**
+ * A Vite build manifest: the modules a build emitted, the file each one compiled into, the
+ * stylesheets that file needs, and the manifest keys it imports.
+ *
+ * `imports` is the other half of "what does this page cost": a component's chunk is only reachable
+ * through the catalog's `() => import(…)` loader, so the manifest is the one place the chain from a
+ * tag to every file behind it is written down. See `component-chunks.ts`.
+ *
+ * `dynamicImports` is declared so that it is clear it is *not* followed: those are the components
+ * a chunk loads lazily itself, which are the page's business only if the page uses them.
+ */
+export type Manifest = Record<
+  string,
+  { file: string; css?: string[]; imports?: string[]; dynamicImports?: string[] }
+>;
 
 /** A build that names custom elements, and the manifest of what it emitted */
 export interface ComponentBuild {
@@ -87,8 +100,11 @@ export function tagsIn(html: string): string[] {
  *
  * `prefix` is where the build is served from: empty for the shell, `explore/dist/` for a team -
  * whose stylesheets are emitted into its own build and fetched from there, not from the shell's.
+ *
+ * Exported because a chunk url needs the same answer as a stylesheet url - see
+ * `component-chunks.ts`, which resolves the other half of a page's cost from the same manifests.
  */
-function toUrl(file: string, prefix = ""): string {
+export function toUrl(file: string, prefix = ""): string {
     return `/${prefix}${file.replace(/^\/+/, "")}`;
 }
 

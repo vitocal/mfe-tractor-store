@@ -10,8 +10,14 @@ import type { Plugin } from "vite";
  * the shell's own script, and the `import()` that follows is then a module-map hit: exactly what
  * the shell had for free while the teams were bundled into it.
  *
- * `PRELOAD_MITIGATION=1` turns it on (see `vite.config.js`). Off by default, because it is a
- * network optimisation and the pages are correct either way.
+ * On by default - `PRELOAD_MITIGATION=0` turns it off (see `vite.config.js`). It used to be the
+ * other way round, on the strength of a measurement taken on localhost, where a round trip costs
+ * nothing and so this could only ever look like noise. On a real connection the round trip it
+ * removes is most of a navigation.
+ *
+ * This covers the catalogs, which every page needs and which nothing in the document names. The
+ * chunks *behind* a catalog are per page, so the prerender links those instead - see
+ * `component-chunks.ts`.
  */
 
 /** Marks the block, so a build starting from a previous output replaces it rather than stacking */

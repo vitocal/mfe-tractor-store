@@ -21,6 +21,7 @@ export const Home = ({ }) => {
                         <img
                             src={src(image, 500)}
                             srcSet={srcset(image, [500, 1000])}
+                            fetchpriority="high"
                             sizes="100vw, (min-width: 500px) 50vw"
                             alt=""
                         />

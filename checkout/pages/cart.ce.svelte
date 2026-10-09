@@ -46,7 +46,7 @@
 
 <div data-boundary-page="checkout" class="page">
   <explore-components-header></explore-components-header>
-  <main class="c_CartPage">
+  <main class="c_CartPage" id="main">
     <h2>Basket</h2>
     <ul class="c_CartPage__lineItems">
       {#each lineItems as item (item.sku)}
