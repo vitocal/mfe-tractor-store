@@ -168,6 +168,7 @@ vi-router {
     height: 185px;
     padding: 0;
     margin: 0;
+    mix-blend-mode: darken;
   }
 
   explore-components-recommendations {
@@ -212,6 +213,7 @@ vi-router {
   .appear-once {
     animation: var(--animation-appear-name) 177ms ease-out;
     animation-fill-mode: both;
+    animation-iteration-count: 1;
   }
 
   /* ce-elements should only animate once defined */
@@ -236,8 +238,13 @@ vi-router {
  * takes the page away and brings it back - and on a slow connection they fire seconds late, when
  * the component's chunk finally lands, over content the visitor is already reading. The marker is
  * on `<html>` for exactly this kind of question - see `scripts/prerendered.ts`.
+ *
+ * The classes are named here rather than the `ce="defined"` pair this used to target, because no
+ * component carries the bare `appear` class: that variant matched nothing, so every `.appear-once`
+ * and `.appear-always` on a prerendered page still ran - and those are the ones that replay the
+ * page when a component replaces its markup instead of hydrating it.
  */
-:root[data-appear="true"][data-prerendered] .appear[ce="defined"] {
+:root[data-appear="true"][data-prerendered] :is(.appear, .appear-once, .appear-always) {
   animation: none;
 }
 

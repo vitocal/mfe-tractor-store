@@ -16,7 +16,10 @@
  *   2. it re-snapshots whenever the DOM changes (`onDomChanged`, a MutationObserver), the viewport
  *      resizes, or a transition/animation ends,
  *   3. it diffs the two snapshots and reports every element whose box moved or resized, with a
- *      CLS-shaped score, and calls out the outermost element that moved - the one worth fixing.
+ *      CLS-shaped score, and calls out the outermost element that moved - the one worth fixing,
+ *   4. it brackets the navigation with `pageswap` / `pagereveal` and reports the one thing a view
+ *      transition cannot tell you about itself: an element it captured leaving the document while
+ *      the transition is still running, which aborts the whole transition (see `casualties`).
  *
  * Cross-check the total against the real thing, which scores the same events without per-element
  * double counting:
@@ -34,6 +37,8 @@
  *
  *   __cls.report()   // console.table of every shift, oldest first
  *   __cls.shifts     // the raw array
+ *   __cls.vtReport() // console.table of the view transitions this document took part in
+ *   __cls.transitions
  *   __cls.stop()     // stop watching
  *   __cls.start()    // start again
  *   __cls.reset()    // forget what was collected
@@ -44,7 +49,7 @@
   const SKIP = new Set(["SCRIPT", "STYLE", "LINK", "META", "TITLE", "HEAD", "NOSCRIPT", "TEMPLATE"]);
   const EPS = 0.5; // sub-pixel moves are not shifts
 
-  const options = { onScreenOnly: true, reportMutations: true };
+  const options = { onScreenOnly: true, reportMutations: true, trackTransitions: true };
 
   /** A stable, readable id per node, so a shift can be pointed at in the elements panel. */
   let seq = 0;
@@ -164,6 +169,7 @@
     const rows = [];
     const gone = [];
     const fresh = [];
+    const dropped = []; // the nodes that left the document this frame, by identity
 
     for (const [el, cur] of next) {
       const old = prev.get(el);
@@ -192,6 +198,7 @@
 
     const appeared = [];
     for (const [el, old] of gone) {
+      dropped.push(el);
       const list = bySig.get(short(el));
       const hit = list && list.shift();
       if (hit) rows.push(row(hit[0], at, "replaced", old, hit[1]));
@@ -200,7 +207,7 @@
     for (const list of bySig.values())
       for (const [el, cur] of list) appeared.push(row(el, at, "added", cur, cur));
 
-    return { rows, appeared };
+    return { rows, appeared, dropped };
   }
 
   /**
@@ -216,6 +223,156 @@
       for (let p = r.node.parentElement; p; p = p.parentElement) if (masks.has(p)) return false;
       return true;
     });
+  }
+
+  /* -------------------------------------------------------- view transitions -- */
+
+  /**
+   * A view transition is not a layout shift, but it fails for the same reason one appears: a
+   * component arriving late and changing the page under the visitor.
+   *
+   * A cross-document transition captures the elements that ask for it by `view-transition-name`,
+   * and **aborts the whole transition when one of those elements leaves the document while it is
+   * running**. A prerendered page is exactly the trap: it hands its markup to the visitor before
+   * any component has upgraded, so the moment a team's framework mounts *over* that markup rather
+   * than hydrating it, every captured node is replaced and the morph the page asked for is thrown
+   * away a few frames in, silently. Nothing warns about it: the outgoing document only sees
+   * `InvalidStateError: Transition was aborted because of invalid state. Document hidden`.
+   *
+   * `pageswap` and `pagereveal` bracket the navigation, and the second is where the incoming
+   * document learns it is being transitioned. This tracker is already the only thing here that
+   * knows a node by identity and notices it being replaced, so the diagnosis is the `dropped` list
+   * away: remember the names the transition captured, then report the ones the DOM takes away
+   * while it is still running.
+   */
+  const transitions = [];
+
+  /** The transition whose animations are running, or null. */
+  let live = null;
+
+  /** Every element this document is asking to be captured, and the name it asks for it under. */
+  function collectCaptured() {
+    const found = new Map();
+    for (const el of document.querySelectorAll("*")) {
+      const name = getComputedStyle(el).viewTransitionName;
+      if (name && name !== "none") found.set(el, name);
+    }
+    return found;
+  }
+
+  const nameList = (found) => [...found].map(([el, name]) => `${name} <- ${short(el)}`);
+
+  /**
+   * The names a transition captured that are no longer in the document.
+   *
+   * Asked of the nodes themselves rather than of a snapshot diff, because the change that aborts a
+   * transition is the same one that makes `finished` resolve: a diff would have to be taken on the
+   * next frame, by which time the transition is already over and this tracker has stopped looking.
+   */
+  const casualties = (entry) =>
+    [...(entry.captured || new Map())].filter(([el]) => !el.isConnected).map(([, name]) => name);
+
+  /**
+   * Records what a transition did, without ever rejecting.
+   *
+   * `ready` rejects on the outgoing side of *every* cross-document transition - the document is
+   * hidden at commit, which is not a failure - and both reject when a transition is skipped. A
+   * rejection is information here, never an error.
+   */
+  function watch(vt, entry) {
+    if (entry.watched) return;
+    entry.watched = true;
+
+    vt.ready
+      .then(() => (entry.ready = "resolved"))
+      .catch((error) => (entry.ready = `${error.name}: ${error.message}`));
+    vt.finished
+      .then(() => (entry.finished = "resolved"))
+      .catch((error) => (entry.finished = `${error.name}: ${error.message}`))
+      .then(() => {
+        if (!entry.canceled) {
+          const gone = casualties(entry);
+          if (gone.length) reportCanceled(entry, gone);
+        }
+
+        if (live === entry) live = null;
+      });
+  }
+
+  function onPageSwap(event) {
+    const vt = event.viewTransition;
+    const activation = event.activation;
+    const entry = {
+      vt,
+      direction: "out",
+      at: Math.round(performance.now()),
+      transitioned: !!vt,
+      url: (activation && activation.entry && activation.entry.url) || location.href,
+      names: nameList(collectCaptured()),
+    };
+
+    transitions.push(entry);
+    if (vt) watch(vt, entry);
+  }
+
+  /**
+   * The incoming half of the navigation.
+   *
+   * A tracker that started late has already adopted this transition from the document (see
+   * `start`), and `pagereveal` still arrives after that: `activeViewTransition` is set before the
+   * event is dispatched. So the transition object is the key, and the second arrival fills in the
+   * entry the first one made rather than recording the same transition twice.
+   */
+  function onPageReveal(event) {
+    const vt = event.viewTransition;
+    let entry = vt && transitions.find((known) => known.vt === vt);
+
+    if (!entry) {
+      entry = {
+        vt,
+        direction: "in",
+        at: Math.round(performance.now()),
+        transitioned: !!vt,
+        url: location.href,
+        names: [],
+      };
+
+      transitions.push(entry);
+    }
+
+    entry.captured = collectCaptured();
+    entry.names = nameList(entry.captured);
+
+    if (!vt) return;
+
+    live = entry;
+    watch(vt, entry);
+  }
+
+  /**
+   * The captured names this frame took away, for a transition that is still running. The same
+   * question is asked of `isConnected` when the transition ends - see `casualties`.
+   */
+  const canceledBy = (entry, dropped) =>
+    dropped
+      .filter((el) => entry.captured && entry.captured.has(el))
+      .map((el) => entry.captured.get(el));
+
+  function reportCanceled(entry, gone) {
+    entry.canceled = { at: Math.round(performance.now()), names: gone };
+
+    console.group(
+      `%c[cls]%c view transition CANCELED at ${entry.canceled.at}ms - ${gone.length} captured element(s) replaced`,
+      "background:#ff5a55;color:#fff;border-radius:3px;padding:0 4px",
+      "",
+    );
+    console.log(`captured as: ${gone.join(", ")}`);
+    console.log(
+      "A `view-transition-name` element leaving the document aborts the whole transition, so a",
+      "prerendered page whose components mount over the markup instead of hydrating it loses the",
+      "morph it asked for - and nothing else reports it.",
+    );
+    console.groupEnd();
   }
 
   const shifts = [];
@@ -235,7 +392,13 @@
       const next = snapshot();
       const at = Math.round(performance.now());
       if (prev) {
-        const { rows, appeared } = diff(prev, next, at);
+        const { rows, appeared, dropped } = diff(prev, next, at);
+
+        if (options.trackTransitions && live && !live.canceled) {
+          const gone = canceledBy(live, dropped);
+          if (gone.length) reportCanceled(live, gone);
+        }
+
         if (rows.length) emit(rows);
         else if (options.reportMutations && !first && appeared.length)
           console.debug(`[cls] ${at}ms - ${appeared.length} node(s) added/removed, nothing shifted`);
@@ -270,6 +433,7 @@
   const api = {
     options,
     shifts,
+    transitions,
     get running() {
       return watching;
     },
@@ -287,6 +451,35 @@
       for (const ev of events) addEventListener(ev, onChange, true);
       cleanups.push(() => events.forEach((ev) => removeEventListener(ev, onChange, true)));
 
+      if (options.trackTransitions) {
+        const vtEvents = { pageswap: onPageSwap, pagereveal: onPageReveal };
+        for (const type of Object.keys(vtEvents)) addEventListener(type, vtEvents[type]);
+        cleanups.push(() => {
+          for (const type of Object.keys(vtEvents)) removeEventListener(type, vtEvents[type]);
+        });
+
+        // Loaded before the first render, `pagereveal` is still ahead of us. A script that was
+        // added late has missed it, and the transition is then only reachable from the document.
+        const active = document.activeViewTransition;
+        if (active && !live && !transitions.length) {
+          const entry = {
+            vt: active,
+            direction: "in",
+            at: Math.round(performance.now()),
+            transitioned: true,
+            url: location.href,
+            names: [],
+          };
+
+          entry.captured = collectCaptured();
+          entry.names = nameList(entry.captured);
+
+          transitions.push(entry);
+          live = entry;
+          watch(active, entry);
+        }
+      }
+
       console.log("%c[cls] tracking layout shifts", "color:#ff5a55;font-weight:600");
       return api;
     },
@@ -297,9 +490,34 @@
     },
     reset() {
       shifts.length = 0;
+      transitions.length = 0;
       return api;
     },
     report,
+    /** The view transitions this document took part in, and how each one ended. */
+    vtReport() {
+      if (transitions.length) {
+        console.table(
+          transitions.map((entry) => ({
+            direction: entry.direction,
+            at: entry.at,
+            transitioned: entry.transitioned,
+            url: entry.url,
+            names: entry.names.join(", "),
+            ready: entry.ready || "-",
+            finished: entry.finished || "-",
+            canceled: entry.canceled
+              ? `${entry.canceled.names.length} captured name(s) at ${entry.canceled.at}ms`
+              : "-",
+          })),
+        );
+      }
+
+      const lost = transitions.filter((entry) => entry.canceled).length;
+      console.log(`[cls] ${transitions.length} view transition(s), ${lost} canceled`);
+
+      return transitions;
+    },
   };
 
   window.__cls = api;

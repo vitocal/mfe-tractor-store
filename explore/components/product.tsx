@@ -1,4 +1,3 @@
-import { useRef } from "preact/hooks";
 import { src, srcset, fmtprice } from "../utils";
 
 import "./product.css";
@@ -9,22 +8,10 @@ import "./product.css";
  * @returns {string} The Product component markup.
  */
 export default ({ name, url, image, startPrice, className }) => {
-  const onClick = (ev) => {
-    if ('startViewTransition' in document) {
-      const link = ev.currentTarget;
-      console.log('onClick', ev.currentTarget);
-      const img = link.querySelector('.e_Product_image');
-      const nameEl = link.querySelector('.e_Product_name');
-
-      console.log('img', img, nameEl);
-      if (img) img.style.viewTransitionName = 'product-image';
-      if (nameEl) nameEl.style.viewTransitionName = 'product-title';
-    }
-  };
 
   return (
     <li className={["e_Product", className].filter(Boolean).join(' ')} key={url} >
-      <a className="e_Product_link" href={url} onClickCapture={onClick} data-navigo>
+      <a className="e_Product_link" href={url} data-navigo>
         <img
           className="e_Product_image"
           src={src(image, 200)}

@@ -103,3 +103,27 @@ decide-components-variant:not(:defined) {
 .d_ProductPage__variants {
   min-height: 20px;
 }
+
+/**
+ * Enable image/title transition from recommendation list to product
+ */
+.e_Recommendations_list .e_Recommendation_link:focus {
+  color: red;
+
+  .e_Recommendation_image {
+    view-transition-name: product-image;
+  }
+  .e_Recommendation_name {
+    view-transition-name: product-title;
+  }
+}
+
+/** Clear previous view-transition-names*/
+.d_ProductPage:has(.e_Recommendation_link:focus) {
+  .d_ProductPage__productImage {
+    view-transition-name: none;
+  }
+  .d_ProductPage__title {
+    view-transition-name: none;
+  }
+}

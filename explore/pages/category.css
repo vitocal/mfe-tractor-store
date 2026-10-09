@@ -41,3 +41,14 @@
   margin: 0;
   line-height: 1.5;
 }
+
+.e_Product_link:focus {
+  color: red !important;
+
+  .e_Product_image {
+    view-transition-name: product-image;
+  }
+  .e_Product_name {
+    view-transition-name: product-title;
+  }
+}
