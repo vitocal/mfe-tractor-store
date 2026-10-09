@@ -12,9 +12,11 @@ export default ({ name, url, image, startPrice, className }) => {
   const onClick = (ev) => {
     if ('startViewTransition' in document) {
       const link = ev.currentTarget;
+      console.log('onClick', ev.currentTarget);
       const img = link.querySelector('.e_Product_image');
       const nameEl = link.querySelector('.e_Product_name');
 
+      console.log('img', img, nameEl);
       if (img) img.style.viewTransitionName = 'product-image';
       if (nameEl) nameEl.style.viewTransitionName = 'product-title';
     }
@@ -22,7 +24,7 @@ export default ({ name, url, image, startPrice, className }) => {
 
   return (
     <li className={["e_Product", className].filter(Boolean).join(' ')} key={url} >
-      <a className="e_Product_link" href={url} onClick={onClick} data-navigo>
+      <a className="e_Product_link" href={url} onClickCapture={onClick} data-navigo>
         <img
           className="e_Product_image"
           src={src(image, 200)}

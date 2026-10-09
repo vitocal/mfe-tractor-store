@@ -31,6 +31,12 @@ p {
   line-height: 1.5;
 }
 
+a {
+  &:active {
+    color: blue;
+  }
+}
+
 /* web components states */
 :where(:not(:defined)) {
   --bg-color: #ccc;
