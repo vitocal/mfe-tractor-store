@@ -1,5 +1,5 @@
 <template>
-  <div data-boundary-page="decide">
+  <div data-boundary-page="decide" class="page">
     <explore-components-header loading="eager"></explore-components-header>
     <main id="main" class="d_ProductPage">
       <div class="d_ProductPage__details" v-if="product?.name">

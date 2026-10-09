@@ -220,8 +220,8 @@ showToggleButton();
 //   console.log("Cleared storage on full browser reload!");
 // }
 
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    document.documentElement.dataset.appear = "false";
-  }, 1000);
-});
+// window.addEventListener("load", () => {
+//   setTimeout(() => {
+//     document.documentElement.dataset.appear = "false";
+//   }, 1000);
+// });

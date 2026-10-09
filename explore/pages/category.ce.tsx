@@ -27,7 +27,7 @@ export const Category = ({ category }: { category: String }) => {
     })),
   ];
 
-  return (<div data-boundary-page="explore">
+  return (<div data-boundary-page="explore" class="page">
     <explore-components-header loading="eager" ></explore-components-header>
     <main id="main" className="e_CategoryPage">
       <h2>{title}</h2>

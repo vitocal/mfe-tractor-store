@@ -9,6 +9,10 @@
   @view-transition {
     navigation: auto;
   }
+
+  ::view-transition-group(*) {
+    animation-duration: 1s;
+  }
 </style>
 
 <link rel="apple-touch-icon" sizes="180x180" href="/cdn/img/meta/apple-touch-icon.png" />
@@ -25,6 +29,7 @@
 <meta name="description" content="A non trivial micro frontends example store">
 
 <link rel="stylesheet" href="./src/styles.css" />
+<link rel=expect href="#main" blocking=render>
 
 <script src="/cdn/js/helper.js" defer></script>
 
@@ -32,7 +37,7 @@
 %SPA_ROUTER%
 
 <!-- Preloads -->
-<link rel="preload" href="/cdn/img/logo.svg" as="image" />
+<link rel="preload" as="image" href="/cdn/img/logo.svg" />
 
 </head>
 

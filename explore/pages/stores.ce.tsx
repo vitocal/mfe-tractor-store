@@ -17,7 +17,7 @@ const Stores = () => {
 
     //     adoptStylesheet(this || document, css);
 
-    return <div data-boundary-page="explore">
+    return <div data-boundary-page="explore" class="page">
         <explore-components-header></explore-components-header>
         <main id="main" class="e_StoresPage">
             <h2>Our Stores</h2>

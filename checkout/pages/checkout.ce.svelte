@@ -43,7 +43,7 @@
   });
 </script>
 
-<div data-boundary-page="checkout">
+<div data-boundary-page="checkout" class="page">
   <checkout-components-compactheader></checkout-components-compactheader>
   <main class="c_Checkout">
     <h2>Checkout</h2>

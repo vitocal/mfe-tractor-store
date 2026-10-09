@@ -12,8 +12,8 @@ export const Home = ({ }) => {
     const [skus, _setSkus] = useState(["CL-01-GY", "AU-07-MT"])
     const recsRef = useUpgradedProps({ skus });
 
-    return <div data-boundary-page="explore">
-        <explore-components-header loading="eager" style="min-height: 187px"></explore-components-header>
+    return <div data-boundary-page="explore" class="page">
+        <explore-components-header loading="eager"></explore-components-header>
         <main id="main" className="e_HomePage">
             {data.teaser.map(
                 ({ title, image, url }) =>

@@ -44,7 +44,7 @@
   $: skus = lineItems.map(({ sku }) => sku);
 </script>
 
-<div data-boundary-page="checkout">
+<div data-boundary-page="checkout" class="page">
   <explore-components-header></explore-components-header>
   <main class="c_CartPage">
     <h2>Basket</h2>
