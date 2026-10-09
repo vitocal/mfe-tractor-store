@@ -60,17 +60,38 @@
     return id;
   }
 
-  /** `main#main.d_ProductPage > div.page` - enough to find the element by hand. */
+  /**
+   * `main#main.d_ProductPage > div.page` - enough to find the element by hand.
+   *
+   * Read through `getAttribute`, never through the properties. `className` and `id` are ordinary
+   * DOM properties *and* plausible component props, and `preact-custom-element` defines a getter
+   * for every name in the list a component observes:
+   *
+   *     get() { return this._vdom ? this._vdom.props[name] : this._props[name] }
+   *
+   * On an element that is defined but not upgraded yet - and again after `disconnectedCallback`,
+   * which sets `_vdom = null` - neither branch has anything behind it, so reading the property
+   * throws instead of returning the class. One such element anywhere in the document was enough to
+   * take this whole tracker down, because the throw escaped the snapshot's frame callback.
+   */
   function short(el) {
     const parts = [];
-    for (let n = el, i = 0; n && n.nodeType === 1 && i < 4; n = n.parentElement, i++) {
-      const cls =
-        typeof n.className === "string" && n.className.trim()
-          ? "." + n.className.trim().split(/\s+/).slice(0, 2).join(".")
-          : "";
-      parts.unshift(n.tagName.toLowerCase() + (n.id ? `#${n.id}` : "") + cls);
-      if (n.id) break;
+
+    try {
+      for (let n = el, i = 0; n && n.nodeType === 1 && i < 4; n = n.parentElement, i++) {
+        const cls = (n.getAttribute("class") || "").trim();
+        const id = n.getAttribute("id");
+        const classes = cls ? "." + cls.split(/\s+/).slice(0, 2).join(".") : "";
+
+        parts.unshift(n.tagName.toLowerCase() + (id ? `#${id}` : "") + classes);
+
+        if (id) break;
+      }
+    } catch {
+      // A label is never worth an exception: surviving the page is the whole point of this file.
+      return parts.join(" > ") || el.nodeName.toLowerCase();
     }
+
     return parts.join(" > ");
   }
 
