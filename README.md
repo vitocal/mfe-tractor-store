@@ -229,9 +229,32 @@ all - `appType: "spa"` already serves the shell for every route there.
 - The shell build consumes the published team catalogs and routes, so the teams have to be built
   first (`npm run build --workspaces`). `npm run build` builds them for you.
 - The components upgrade the tags the pass left in the document, so the first paint is the
-  prerendered markup. Preact and Vue replace it as they mount; Svelte mounts by _appending_, so
-  the checkout team's custom elements clear their host first (`adoptPrerenderedMarkup`) - without
-  that, a prerendered page would show the build-time render and then the live one underneath it.
+  prerendered markup. Nothing adopts it, though - each team's framework renders it again, and each
+  one gets there differently:
+  - **Preact** has no hydration path at all. `preact-custom-element` does take a `hydrate`
+    attribute, but `toVdom` empties the host (`element.innerHTML = ''`) _before_ it hydrates, so the
+    attribute hydrates an empty root - the markup is gone with or without it. Only a registration of
+    our own, one that calls `hydrate(vnode, host)` directly, adopts what the page arrived with.
+  - **Vue** can hydrate - `defineSSRCustomElement` is `defineCustomElement` built on `createSSRApp` -
+    but not while `VueElement`'s slot handling is in the way. `_parseSlots` moves the host's children
+    into slots, and out of the document, before the mount; `_renderSlots` looks for outlets with
+    `querySelectorAll("slot")`, which is every `<slot>` in the subtree rather than the component's
+    own, so it finds the one `ds-button` renders, hoists that outlet's children and removes it.
+    [`decide/vue-ce.ts`](./decide/vue-ce.ts) turns both off and picks `createSSRApp` per host.
+  - **Svelte** mounts by _appending_, and its custom-element code path calls `mount` rather than
+    `hydrate` (`createClassComponent` is never given `hydrate: true`), so the build-time render stays
+    put and the live one lands below it. The checkout team's elements clear their host first
+    (`adoptPrerenderedMarkup`) - without that, a prerendered page would show the build-time render
+    and then the live one underneath it.
+- Because every one of those paths takes the prerendered elements out and puts new ones in, **an
+  element a component owns can not be captured by a view transition.** A transition is aborted
+  outright as soon as an element carrying a `view-transition-name` leaves the document, so the morph
+  is lost the moment the component mounts. Naming an element outside a component's render root, or
+  hydrating the component (Vue, above), is what keeps it - and
+  [`public/cdn/js/cls-tracker.js`](./public/cdn/js/cls-tracker.js) reports which captured elements a
+  page replaced, from its `pageswap`/`pagereveal` half. The same replacement is why
+  [`src/styles.css`](./src/styles.css) switches the `appear-*` animations off on a prerendered page:
+  they start at `opacity: 0`, so replaying them takes the page away and brings it back.
 - A prerendered page carries `data-prerendered="/the/route"` on `<html>`. The shell reads it
   and leaves the stage alone, rather than rendering the same route over the markup. The router
   still ships: a prerendered page links to routes no pass prerenders, and those are rendered in

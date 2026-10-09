@@ -1,5 +1,5 @@
-import { defineCustomElement } from "vue";
-import type { Component } from "vue";
+import { createApp, createSSRApp, defineCustomElement } from "vue";
+import type { App, Component } from "vue";
 
 /**
  * A Vue SFC as the custom element a catalog loader hands back.
@@ -17,9 +17,32 @@ import type { Component } from "vue";
  *
  * `shadowRoot: false` because these elements are styled by the stylesheets the page links; a shadow
  * root would cut them off from the page's own css.
+ *
+ * The element adopts the markup a prerendered page already has, rather than rendering over it, so
+ * the nodes a view transition captured are still there when it runs. Why that takes the three
+ * lines below: the README's SSG notes, "No framework adopts the markup the pass wrote".
  */
 export function asCustomElement(component: Component): CustomElementConstructor {
-  return defineCustomElement(component, { shadowRoot: false });
+  const Element = defineElement(component, { shadowRoot: false }, createForHost);
+
+  // Vue moves the host's children into slots, and out of the document, before it mounts - the
+  // opposite of adopting them. `_renderSlots` then reaches for the `<slot>` inside `ds-button`.
+  (Element.prototype as Record<string, unknown>)._parseSlots = () => {};
+  (Element.prototype as Record<string, unknown>)._renderSlots = () => {};
+
+  return Element;
 }
+
+/** Hydrate the markup already in the host; render from nothing when there is none. */
+function createForHost(this: HTMLElement, definition: Component): App {
+  return this.hasChildNodes() ? createSSRApp(definition) : createApp(definition);
+}
+
+/** `defineCustomElement` takes the app factory as a third argument; the types leave it out. */
+const defineElement = defineCustomElement as (
+  component: Component,
+  options: { shadowRoot: false },
+  createApp: (definition: Component) => App,
+) => CustomElementConstructor;
 
 export default asCustomElement;
